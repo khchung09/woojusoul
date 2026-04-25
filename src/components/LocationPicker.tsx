@@ -42,17 +42,18 @@ export function LocationPicker({ onSelect, initial }: Props) {
       });
     }
 
-    kakao.maps.event.addListener(map, "click", (e: { latLng: KakaoLatLng }) => {
+    kakao.maps.event.addListener(map, "click", (e: unknown) => {
+      const { latLng } = e as { latLng: KakaoLatLng };
       const { kakao: k } = window;
       if (!markerRef.current) {
-        markerRef.current = new k.maps.Marker({ map, position: e.latLng, draggable: true });
+        markerRef.current = new k.maps.Marker({ map, position: latLng, draggable: true });
         k.maps.event.addListener(markerRef.current, "dragend", () => {
           geocodeLocation(markerRef.current!.getPosition());
         });
       } else {
-        markerRef.current.setPosition(e.latLng);
+        markerRef.current.setPosition(latLng);
       }
-      geocodeLocation(e.latLng);
+      geocodeLocation(latLng);
     });
   }, [isLoaded]);
 
