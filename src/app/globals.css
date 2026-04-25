@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* 브랜드 컬러 — amber 팔레트를 따뜻한 갈색/베이지 톤으로 재정의 */
+@theme {
+  --color-amber-50:  #FBF6EE;
+  --color-amber-100: #F5E6CC;
+  --color-amber-200: #EACFA3;
+  --color-amber-300: #DDB97A;
+  --color-amber-400: #D4A96A;
+  --color-amber-500: #C4913E;
+  --color-amber-600: #A67830;
+  --color-amber-700: #8B6914;
+  --color-amber-800: #6B5012;
+  --color-amber-900: #4A380D;
+  --color-amber-950: #2D220A;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
