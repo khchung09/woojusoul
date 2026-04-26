@@ -7,7 +7,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <aside className="hidden md:flex md:w-56 md:flex-col md:border-r md:border-stone-100 md:bg-white md:px-4 md:py-6">
         <div className="mb-8 flex items-center gap-3 px-2">
           <WoojuSoulLogo size={36} />
-          <span className="text-xl font-bold text-amber-700">우주소울</span>
+          <span className="text-xl font-bold text-amber-600">우주소울</span>
         </div>
         <Navbar />
       </aside>

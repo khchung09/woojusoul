@@ -15,3 +15,7 @@ export type ReportPost = PostWithAuthor & {
   longitude: number;
 };
 
+export type CommentWithAuthor = Comment & {
+  profiles: Pick<Profile, "username" | "display_name" | "avatar_url"> | null;
+};
+

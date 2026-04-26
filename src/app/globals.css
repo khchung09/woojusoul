@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #F8F4ED;
+  --foreground: #1C1C1C;
 }
 
 @theme inline {
@@ -12,26 +12,28 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* 브랜드 컬러 — amber 팔레트를 따뜻한 갈색/베이지 톤으로 재정의 */
+/*
+  브랜드 컬러 — 올리브 그린 팔레트
+  amber-500  = 주 올리브 (#6B7C3A) — 버튼, 활성 상태
+  amber-600  = 호버 올리브 (#556330)
+  amber-700  = 갈색 (#8B6914) — 로고, 강조 텍스트 (유지)
+  stone-50   = 크림 (#F8F4ED) — 페이지 배경
+*/
 @theme {
-  --color-amber-50:  #FBF6EE;
-  --color-amber-100: #F5E6CC;
-  --color-amber-200: #EACFA3;
-  --color-amber-300: #DDB97A;
-  --color-amber-400: #D4A96A;
-  --color-amber-500: #C4913E;
-  --color-amber-600: #A67830;
+  --color-amber-50:  #F2F5E8;
+  --color-amber-100: #E0E9CA;
+  --color-amber-200: #C2D49A;
+  --color-amber-300: #A3BE6A;
+  --color-amber-400: #86A84C;
+  --color-amber-500: #6B7C3A;
+  --color-amber-600: #556330;
   --color-amber-700: #8B6914;
   --color-amber-800: #6B5012;
   --color-amber-900: #4A380D;
   --color-amber-950: #2D220A;
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* 페이지 배경을 크림으로 */
+  --color-stone-50:  #F8F4ED;
 }
 
 body {
