@@ -1,13 +1,21 @@
 const CACHE_NAME = "woojusoul-v2";
 
-// 빌드 불변 정적 에셋만 캐시 (내용 해시 포함 경로)
 const PRECACHE_ASSETS = [
   "/icon-192.png",
   "/icon-512.png",
   "/woojusoulicon.png",
 ];
 
+// localhost/127.0.0.1에서는 캐시를 완전히 비활성화
+const isDev =
+  self.location.hostname === "localhost" ||
+  self.location.hostname === "127.0.0.1";
+
 self.addEventListener("install", (event) => {
+  if (isDev) {
+    self.skipWaiting();
+    return;
+  }
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_ASSETS))
   );
@@ -24,13 +32,14 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
+  // 개발 환경: 캐시 완전 우회, 모든 요청을 네트워크로
+  if (isDev) return;
+
   const { request } = event;
   const url = new URL(request.url);
 
-  // 외부 요청, non-GET은 무시
   if (url.origin !== self.location.origin || request.method !== "GET") return;
 
-  // API 라우트는 항상 네트워크
   if (url.pathname.startsWith("/api/")) return;
 
   // /_next/static/ — 콘텐츠 해시 포함이므로 캐시 우선 (불변)
@@ -51,10 +60,8 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // /_next/ 나머지 (HMR, 데이터 등) — 네트워크 우선
   if (url.pathname.startsWith("/_next/")) return;
 
-  // 아이콘 등 실제 정적 파일 — 캐시 우선
   if (/\.(png|jpg|jpeg|svg|gif|webp|ico|woff2?)$/.test(url.pathname)) {
     event.respondWith(
       caches.match(request).then(
@@ -72,8 +79,6 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 페이지 내비게이션(HTML) — 항상 네트워크 우선, 실패 시 캐시
-  // (HTML을 캐시 우선으로 서브하면 JS 해시 불일치로 검정 화면 발생)
   if (request.headers.get("accept")?.includes("text/html")) {
     event.respondWith(
       fetch(request).catch(() => caches.match(request))

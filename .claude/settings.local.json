@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npx tsc *)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(xargs -I {} find {} -type f \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" \\\\\\))"
     ]
   }
 }

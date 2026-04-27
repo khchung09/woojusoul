@@ -19,3 +19,10 @@ export type CommentWithAuthor = Comment & {
   profiles: Pick<Profile, "username" | "display_name" | "avatar_url"> | null;
 };
 
+export type Notification = Database["public"]["Tables"]["notifications"]["Row"];
+
+export type NotificationWithActor = Notification & {
+  actor: Pick<Profile, "username" | "display_name" | "avatar_url"> | null;
+  post: Pick<Post, "id" | "content" | "post_type"> | null;
+};
+

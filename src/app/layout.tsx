@@ -50,26 +50,28 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         {children}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                    reg.addEventListener('updatefound', function() {
-                      var newWorker = reg.installing;
-                      newWorker.addEventListener('statechange', function() {
-                        if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
-                          window.location.reload();
-                        }
+        {process.env.NODE_ENV === "production" && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                if ('serviceWorker' in navigator) {
+                  window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                      reg.addEventListener('updatefound', function() {
+                        var newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', function() {
+                          if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+                            window.location.reload();
+                          }
+                        });
                       });
                     });
                   });
-                });
-              }
-            `,
-          }}
-        />
+                }
+              `,
+            }}
+          />
+        )}
       </body>
     </html>
   );

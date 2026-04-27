@@ -3,6 +3,24 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
+
+async function createNotification(
+  supabase: SupabaseClient,
+  recipientId: string,
+  actorId: string,
+  postId: string,
+  type: "like" | "comment"
+) {
+  if (recipientId === actorId) return;
+  await supabase.from("notifications").insert({
+    recipient_id: recipientId,
+    actor_id: actorId,
+    post_id: postId,
+    type,
+  });
+}
+
 function parseImageUrls(imageUrl: string | null): string[] {
   if (!imageUrl) return [];
   if (imageUrl.startsWith("[")) {
@@ -38,7 +56,7 @@ export async function toggleLike(postId: string): Promise<void> {
 
   const { data: post } = await supabase
     .from("posts")
-    .select("likes_count")
+    .select("likes_count, author_id")
     .eq("id", postId)
     .single();
 
@@ -57,6 +75,7 @@ export async function toggleLike(postId: string): Promise<void> {
         .from("posts")
         .update({ likes_count: post.likes_count + 1 })
         .eq("id", postId);
+      await createNotification(supabase, post.author_id, user.id, postId, "like");
     }
   }
 
@@ -80,7 +99,7 @@ export async function addComment(postId: string, content: string): Promise<void>
 
   const { data: post } = await supabase
     .from("posts")
-    .select("comments_count")
+    .select("comments_count, author_id")
     .eq("id", postId)
     .single();
   if (post) {
@@ -88,6 +107,7 @@ export async function addComment(postId: string, content: string): Promise<void>
       .from("posts")
       .update({ comments_count: post.comments_count + 1 })
       .eq("id", postId);
+    await createNotification(supabase, post.author_id, user.id, postId, "comment");
   }
 
   revalidatePath(`/posts/${postId}`);
@@ -165,6 +185,38 @@ export async function updatePost(
 
   revalidatePath("/feed");
   revalidatePath("/profile");
+}
+
+export async function markNotificationRead(notificationId: string): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("id", notificationId)
+    .eq("recipient_id", user.id);
+
+  revalidatePath("/notifications");
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("recipient_id", user.id)
+    .eq("is_read", false);
+
+  revalidatePath("/notifications");
 }
 
 export async function deletePost(postId: string, imageUrl: string | null): Promise<void> {
