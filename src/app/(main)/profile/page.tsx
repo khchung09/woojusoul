@@ -37,7 +37,8 @@ export default async function ProfilePage() {
       profiles (
         username,
         display_name,
-        avatar_url
+        avatar_url,
+        is_blinded
       )
     `)
     .eq("author_id", user.id)

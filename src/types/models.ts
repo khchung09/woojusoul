@@ -7,8 +7,10 @@ export type Comment = Database["public"]["Tables"]["comments"]["Row"];
 export type Like = Database["public"]["Tables"]["likes"]["Row"];
 
 export type PostWithAuthor = Post & {
-  profiles: Pick<Profile, "username" | "display_name" | "avatar_url"> | null;
+  profiles: Pick<Profile, "username" | "display_name" | "avatar_url" | "is_blinded"> | null;
 };
+
+export type Report = Database["public"]["Tables"]["reports"]["Row"];
 
 export type ReportPost = PostWithAuthor & {
   latitude: number;

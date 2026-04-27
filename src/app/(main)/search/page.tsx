@@ -40,7 +40,7 @@ export default async function SearchPage({ searchParams }: Props) {
     if (mode === "neighborhood") {
       const { data } = await supabase
         .from("posts")
-        .select(`*, profiles(username, display_name, avatar_url)`)
+        .select(`*, profiles(username, display_name, avatar_url, is_blinded)`)
         .eq("post_type", "report")
         .ilike("location_address", `%${q}%`)
         .order("created_at", { ascending: false })
@@ -49,7 +49,7 @@ export default async function SearchPage({ searchParams }: Props) {
     } else {
       let query = supabase
         .from("posts")
-        .select(`*, profiles(username, display_name, avatar_url)`)
+        .select(`*, profiles(username, display_name, avatar_url, is_blinded)`)
         .ilike("content", `%${q}%`)
         .order("created_at", { ascending: false })
         .limit(30);

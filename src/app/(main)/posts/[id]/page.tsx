@@ -22,7 +22,7 @@ export default async function PostDetailPage({
     await Promise.all([
       supabase
         .from("posts")
-        .select("*, profiles(username, display_name, avatar_url)")
+        .select("*, profiles(username, display_name, avatar_url, is_blinded)")
         .eq("id", id)
         .single(),
       user

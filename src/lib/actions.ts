@@ -187,6 +187,34 @@ export async function updatePost(
   revalidatePath("/profile");
 }
 
+export async function reportPost(
+  postId: string,
+  reportedUserId: string,
+  reason: string
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "로그인이 필요합니다" };
+
+  const { error } = await supabase.from("reports").insert({
+    reporter_id: user.id,
+    post_id: postId,
+    reported_user_id: reportedUserId,
+    reason: reason as "spam" | "abusive" | "animal_abuse" | "inappropriate" | "other",
+  });
+
+  if (error) {
+    if (error.code === "23505") return { error: "이미 신고한 게시물입니다" };
+    return { error: "신고에 실패했습니다" };
+  }
+
+  revalidatePath("/feed");
+  revalidatePath(`/posts/${postId}`);
+  return {};
+}
+
 export async function markNotificationRead(notificationId: string): Promise<void> {
   const supabase = await createClient();
   const {

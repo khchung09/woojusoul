@@ -17,6 +17,7 @@ export interface Database {
           avatar_url: string | null;
           bio: string | null;
           is_verified: boolean;
+          is_blinded: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -86,6 +87,7 @@ export interface Database {
           animal_status: "rescue_needed" | "protected" | "rescued" | null;
           likes_count: number;
           comments_count: number;
+          report_count: number;
           created_at: string;
           updated_at: string;
         };
@@ -159,6 +161,26 @@ export interface Database {
           post_id?: string;
           user_id?: string;
         };
+        Relationships: [];
+      };
+      reports: {
+        Row: {
+          id: string;
+          reporter_id: string;
+          post_id: string;
+          reported_user_id: string;
+          reason: "spam" | "abusive" | "animal_abuse" | "inappropriate" | "other";
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          reporter_id: string;
+          post_id: string;
+          reported_user_id: string;
+          reason: "spam" | "abusive" | "animal_abuse" | "inappropriate" | "other";
+          created_at?: string;
+        };
+        Update: Record<string, never>;
         Relationships: [];
       };
       notifications: {

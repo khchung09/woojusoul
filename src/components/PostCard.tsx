@@ -9,10 +9,13 @@ import {
   MoreVertical,
   Pencil,
   Trash2,
+  Flag,
+  ShieldAlert,
 } from "lucide-react";
 import { formatDistanceToNow } from "@/lib/dateUtils";
 import { deletePost, toggleLike } from "@/lib/actions";
 import type { PostWithAuthor } from "@/types/models";
+import ReportModal from "@/components/ReportModal";
 
 type PostType = "general" | "report" | "temp_protect" | "adoption";
 
@@ -190,6 +193,7 @@ export default function PostCard({
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [deleting, startDeleteTransition] = useTransition();
   const [liked, setLiked] = useState(initialLiked);
   const [likesCount, setLikesCount] = useState(post.likes_count);
@@ -215,6 +219,10 @@ export default function PostCard({
 
   const imageUrls = parseImageUrls(post.image_url);
   const isOwn = !!currentUserId && currentUserId === post.author_id;
+
+  const isBlindedPost = (post.report_count ?? 0) >= 5 && !isOwn;
+  const isBlindedUser = (post.profiles?.is_blinded === true) && !isOwn;
+  const isBlinded = isBlindedPost || isBlindedUser;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -271,6 +279,20 @@ export default function PostCard({
     });
   }
 
+  if (isBlinded) {
+    return (
+      <article className="rounded-2xl bg-white shadow-sm border border-stone-100 overflow-hidden">
+        <div className="p-5 flex items-center gap-3">
+          <ShieldAlert size={20} className="shrink-0 text-stone-300" />
+          <div>
+            <p className="text-sm font-medium text-stone-400">신고된 게시물입니다</p>
+            <p className="text-xs text-stone-300 mt-0.5">커뮤니티 가이드라인 위반으로 가려졌어요</p>
+          </div>
+        </div>
+      </article>
+    );
+  }
+
   return (
     <>
       <article
@@ -314,7 +336,7 @@ export default function PostCard({
                 </span>
               )}
 
-              {isOwn && (
+              {(isOwn || !!currentUserId) && (
                 <div
                   className="relative"
                   ref={menuRef}
@@ -334,20 +356,36 @@ export default function PostCard({
 
                   {menuOpen && (
                     <div className="absolute right-0 top-full z-10 mt-1 w-32 rounded-2xl bg-white py-1.5 shadow-lg border border-stone-100">
-                      <button
-                        onClick={handleEdit}
-                        className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
-                      >
-                        <Pencil size={13} />
-                        수정하기
-                      </button>
-                      <button
-                        onClick={handleDeleteConfirm}
-                        className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                      >
-                        <Trash2 size={13} />
-                        삭제하기
-                      </button>
+                      {isOwn ? (
+                        <>
+                          <button
+                            onClick={handleEdit}
+                            className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+                          >
+                            <Pencil size={13} />
+                            수정하기
+                          </button>
+                          <button
+                            onClick={handleDeleteConfirm}
+                            className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 size={13} />
+                            삭제하기
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMenuOpen(false);
+                            setShowReportModal(true);
+                          }}
+                          className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <Flag size={13} />
+                          신고하기
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -448,6 +486,14 @@ export default function PostCard({
           </div>
         </div>
       </article>
+
+      {showReportModal && post.author_id && (
+        <ReportModal
+          postId={post.id}
+          reportedUserId={post.author_id}
+          onClose={() => setShowReportModal(false)}
+        />
+      )}
 
       {showDeleteConfirm && (
         <div
