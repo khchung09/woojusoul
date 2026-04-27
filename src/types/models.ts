@@ -7,10 +7,16 @@ export type Comment = Database["public"]["Tables"]["comments"]["Row"];
 export type Like = Database["public"]["Tables"]["likes"]["Row"];
 
 export type PostWithAuthor = Post & {
-  profiles: Pick<Profile, "username" | "display_name" | "avatar_url" | "is_blinded"> | null;
+  profiles: Pick<Profile, "username" | "avatar_url" | "is_blinded"> | null;
 };
 
 export type Report = Database["public"]["Tables"]["reports"]["Row"];
+
+export type Application = Database["public"]["Tables"]["applications"]["Row"];
+
+export type ApplicationWithApplicant = Application & {
+  applicant: Pick<Profile, "username" | "avatar_url"> | null;
+};
 
 export type ReportPost = PostWithAuthor & {
   latitude: number;
@@ -18,13 +24,13 @@ export type ReportPost = PostWithAuthor & {
 };
 
 export type CommentWithAuthor = Comment & {
-  profiles: Pick<Profile, "username" | "display_name" | "avatar_url"> | null;
+  profiles: Pick<Profile, "username" | "avatar_url"> | null;
 };
 
 export type Notification = Database["public"]["Tables"]["notifications"]["Row"];
 
 export type NotificationWithActor = Notification & {
-  actor: Pick<Profile, "username" | "display_name" | "avatar_url"> | null;
+  actor: Pick<Profile, "username" | "avatar_url"> | null;
   post: Pick<Post, "id" | "content" | "post_type"> | null;
 };
 

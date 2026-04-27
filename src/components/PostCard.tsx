@@ -16,6 +16,7 @@ import { formatDistanceToNow } from "@/lib/dateUtils";
 import { deletePost, toggleLike } from "@/lib/actions";
 import type { PostWithAuthor } from "@/types/models";
 import ReportModal from "@/components/ReportModal";
+import ApplicationModal from "@/components/ApplicationModal";
 
 type PostType = "general" | "report" | "temp_protect" | "adoption";
 
@@ -194,6 +195,7 @@ export default function PostCard({
   const [menuOpen, setMenuOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showApplyModal, setShowApplyModal] = useState(false);
   const [deleting, startDeleteTransition] = useTransition();
   const [liked, setLiked] = useState(initialLiked);
   const [likesCount, setLikesCount] = useState(post.likes_count);
@@ -205,8 +207,7 @@ export default function PostCard({
 
   const postType = (post.post_type ?? "general") as PostType;
   const badge = TYPE_BADGE[postType];
-  const authorName =
-    post.profiles?.display_name ?? post.profiles?.username ?? "알 수 없음";
+  const authorName = post.profiles?.username ?? "알 수 없음";
   const statusBadge = post.animal_status
     ? ANIMAL_STATUS_BADGE[post.animal_status]
     : null;
@@ -314,11 +315,17 @@ export default function PostCard({
         <div className="p-5">
           {/* 헤더 */}
           <div className="mb-3 flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2.5">
+            <div
+              className="flex items-center gap-2.5 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(isOwn ? "/profile" : `/profile/${post.author_id}`);
+              }}
+            >
               <AuthorAvatar name={authorName} />
               <div>
-                <p className="text-sm font-semibold text-stone-900">
-                  {authorName}
+                <p className="text-sm font-semibold text-stone-900 hover:underline">
+                  @{authorName}
                 </p>
                 <p className="text-xs text-stone-400">
                   {formatDistanceToNow(post.created_at)}
@@ -483,6 +490,19 @@ export default function PostCard({
               <MessageCircle size={16} />
               <span>{post.comments_count}</span>
             </button>
+
+            {(postType === "temp_protect" || postType === "adoption") && !isOwn && currentUserId && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowApplyModal(true);
+                }}
+                className="ml-auto rounded-xl bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-100 transition-colors"
+              >
+                신청하기
+              </button>
+            )}
           </div>
         </div>
       </article>
@@ -492,6 +512,14 @@ export default function PostCard({
           postId={post.id}
           reportedUserId={post.author_id}
           onClose={() => setShowReportModal(false)}
+        />
+      )}
+
+      {showApplyModal && (postType === "temp_protect" || postType === "adoption") && (
+        <ApplicationModal
+          postId={post.id}
+          postType={postType}
+          onClose={() => setShowApplyModal(false)}
         />
       )}
 

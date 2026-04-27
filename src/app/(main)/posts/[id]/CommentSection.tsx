@@ -11,7 +11,7 @@ type Props = {
   postId: string;
   comments: CommentWithAuthor[];
   currentUserId: string | null;
-  currentUserDisplayName: string | null;
+  currentUsername: string | null;
 };
 
 function CommentAvatar({ name }: { name: string }) {
@@ -26,7 +26,7 @@ export default function CommentSection({
   postId,
   comments: initialComments,
   currentUserId,
-  currentUserDisplayName,
+  currentUsername,
 }: Props) {
   const router = useRouter();
   const [comments, setComments] = useState(initialComments);
@@ -58,8 +58,7 @@ export default function CommentSection({
         content: text,
         created_at: new Date().toISOString(),
         profiles: {
-          username: currentUserDisplayName ?? "나",
-          display_name: currentUserDisplayName,
+          username: currentUsername ?? "나",
           avatar_url: null,
         },
       },
@@ -95,10 +94,7 @@ export default function CommentSection({
           </p>
         )}
         {comments.map((comment) => {
-          const authorName =
-            comment.profiles?.display_name ??
-            comment.profiles?.username ??
-            "알 수 없음";
+          const authorName = comment.profiles?.username ?? "알 수 없음";
           const isOwnComment =
             !!currentUserId && currentUserId === comment.author_id;
           const isTemp = comment.id.startsWith("temp-");
@@ -113,7 +109,7 @@ export default function CommentSection({
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-baseline gap-2">
                     <span className="text-xs font-semibold text-stone-800">
-                      {authorName}
+                      @{authorName}
                     </span>
                     <span className="text-xs text-stone-400">
                       {formatDistanceToNow(comment.created_at)}

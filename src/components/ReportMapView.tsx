@@ -121,9 +121,7 @@ export function ReportMapView({ posts, isVerified }: Props) {
         <div className="rounded-2xl border border-stone-100 bg-white p-4 shadow-sm">
           <div className="mb-2 flex items-start justify-between gap-2">
             <p className="text-sm font-semibold text-stone-900">
-              {selectedPost.profiles?.display_name ??
-                selectedPost.profiles?.username ??
-                "알 수 없음"}
+              @{selectedPost.profiles?.username ?? "알 수 없음"}
             </p>
             <button
               onClick={() => setSelectedPost(null)}

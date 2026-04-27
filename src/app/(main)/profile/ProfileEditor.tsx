@@ -3,7 +3,7 @@
 import { useState, useRef, useTransition } from "react";
 import { Mail, Camera, Pencil, X, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { updateProfile } from "./actions";
+import { updateProfile, updateUsername } from "./actions";
 import type { Profile } from "@/types/models";
 
 type Props = {
@@ -11,11 +11,13 @@ type Props = {
   userEmail: string;
   postCount: number;
   petCount: number;
+  followerCount: number;
+  followingCount: number;
 };
 
-export default function ProfileEditor({ profile, userEmail, postCount, petCount }: Props) {
+export default function ProfileEditor({ profile, userEmail, postCount, petCount, followerCount, followingCount }: Props) {
   const [isEditing, setIsEditing] = useState(false);
-  const [displayName, setDisplayName] = useState(profile.display_name ?? "");
+  const [username, setUsername] = useState(profile.username);
   const [bio, setBio] = useState(profile.bio ?? "");
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url ?? "");
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -23,6 +25,13 @@ export default function ProfileEditor({ profile, userEmail, postCount, petCount 
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const lastChanged = profile.username_updated_at;
+  const daysSince = lastChanged
+    ? Math.floor((Date.now() - new Date(lastChanged).getTime()) / 86_400_000)
+    : 30;
+  const canChangeUsername = daysSince >= 30;
+  const daysLeft = canChangeUsername ? 0 : 30 - daysSince;
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -32,7 +41,7 @@ export default function ProfileEditor({ profile, userEmail, postCount, petCount 
   }
 
   function handleCancel() {
-    setDisplayName(profile.display_name ?? "");
+    setUsername(profile.username);
     setBio(profile.bio ?? "");
     setAvatarPreview(null);
     setAvatarFile(null);
@@ -44,24 +53,31 @@ export default function ProfileEditor({ profile, userEmail, postCount, petCount 
     startTransition(async () => {
       setError(null);
       try {
-        let finalAvatarUrl: string | null = avatarUrl || null;
+        if (username !== profile.username) {
+          if (!canChangeUsername) {
+            setError(`${daysLeft}일 후에 아이디를 변경할 수 있어요`);
+            return;
+          }
+          const result = await updateUsername(username);
+          if (result.error) {
+            setError(result.error);
+            return;
+          }
+        }
 
+        let finalAvatarUrl: string | null = avatarUrl || null;
         if (avatarFile) {
           const supabase = createClient();
           const ext = avatarFile.name.split(".").pop() ?? "jpg";
-          const fileName = `${profile.id}.${ext}`;
-
           const { error: uploadError } = await supabase.storage
             .from("avatars")
-            .upload(fileName, avatarFile, { upsert: true });
-
+            .upload(`${profile.id}.${ext}`, avatarFile, { upsert: true });
           if (uploadError) throw new Error(`이미지 업로드 실패: ${uploadError.message}`);
-
-          const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
+          const { data } = supabase.storage.from("avatars").getPublicUrl(`${profile.id}.${ext}`);
           finalAvatarUrl = data.publicUrl;
         }
 
-        await updateProfile({ display_name: displayName, bio, avatar_url: finalAvatarUrl });
+        await updateProfile({ bio, avatar_url: finalAvatarUrl });
 
         setAvatarUrl(finalAvatarUrl ?? "");
         setAvatarPreview(null);
@@ -88,7 +104,7 @@ export default function ProfileEditor({ profile, userEmail, postCount, petCount 
             />
           ) : (
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-2xl font-bold text-amber-600">
-              {(displayName || profile.username)[0] ?? "?"}
+              {profile.username[0]?.toUpperCase() ?? "?"}
             </div>
           )}
           {isEditing && (
@@ -111,26 +127,32 @@ export default function ProfileEditor({ profile, userEmail, postCount, petCount 
           )}
         </div>
 
-        {/* 이름 / 사용자명 */}
+        {/* 아이디 / 수정 */}
         <div className="flex-1 min-w-0">
           {isEditing ? (
-            <input
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="닉네임을 입력하세요"
-              maxLength={30}
-              className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-1.5 text-base font-semibold text-stone-900 focus:border-amber-400 focus:bg-white focus:outline-none"
-            />
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-base font-semibold text-stone-400">@</span>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                  disabled={!canChangeUsername}
+                  maxLength={20}
+                  className="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-1.5 text-base font-semibold text-stone-900 focus:border-amber-400 focus:bg-white focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </div>
+              {!canChangeUsername && (
+                <p className="mt-1 text-xs text-stone-400">{daysLeft}일 후 변경 가능해요</p>
+              )}
+            </div>
           ) : (
             <h1 className="text-xl font-bold text-stone-900 truncate">
-              {displayName || profile.username}
+              @{profile.username}
             </h1>
           )}
-          <p className="mt-0.5 text-sm text-stone-500">@{profile.username}</p>
         </div>
 
-        {/* 수정 버튼 */}
         {!isEditing && (
           <button
             type="button"
@@ -172,17 +194,23 @@ export default function ProfileEditor({ profile, userEmail, postCount, petCount 
           <p className="text-xs text-stone-400">게시물</p>
         </div>
         <div className="text-center">
+          <p className="text-lg font-bold text-stone-900">{followerCount}</p>
+          <p className="text-xs text-stone-400">팔로워</p>
+        </div>
+        <div className="text-center">
+          <p className="text-lg font-bold text-stone-900">{followingCount}</p>
+          <p className="text-xs text-stone-400">팔로잉</p>
+        </div>
+        <div className="text-center">
           <p className="text-lg font-bold text-stone-900">{petCount}</p>
           <p className="text-xs text-stone-400">반려동물</p>
         </div>
       </div>
 
-      {/* 에러 메시지 */}
       {error && (
         <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>
       )}
 
-      {/* 저장 / 취소 버튼 */}
       {isEditing && (
         <div className="mt-4 flex justify-end gap-2">
           <button

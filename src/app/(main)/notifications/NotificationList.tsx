@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { Heart, MessageCircle, Bell } from "lucide-react";
+import { Heart, MessageCircle, Bell, ClipboardList, UserPlus } from "lucide-react";
 import { formatDistanceToNow } from "@/lib/dateUtils";
 import { markNotificationRead, markAllNotificationsRead } from "@/lib/actions";
 import type { NotificationWithActor } from "@/types/models";
@@ -36,7 +36,11 @@ export default function NotificationList({ notifications, unreadCount }: Props) 
       if (!notification.is_read) {
         await markNotificationRead(notification.id);
       }
-      router.push(`/posts/${notification.post_id}`);
+      if (notification.type === "follow") {
+        router.push(`/profile/${notification.actor_id}`);
+      } else if (notification.post_id) {
+        router.push(`/posts/${notification.post_id}`);
+      }
     });
   }
 
@@ -48,7 +52,7 @@ export default function NotificationList({ notifications, unreadCount }: Props) 
   }
 
   const actorName = (n: NotificationWithActor) =>
-    n.actor?.display_name ?? n.actor?.username ?? "알 수 없음";
+    n.actor?.username ?? "알 수 없음";
 
   const contentPreview = (n: NotificationWithActor) => {
     const raw = n.post?.content ?? "";
@@ -108,11 +112,21 @@ export default function NotificationList({ notifications, unreadCount }: Props) 
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-sm font-semibold text-stone-900">{name}</span>
+                  <span className="text-sm font-semibold text-stone-900">@{name}</span>
                   {notification.type === "like" ? (
                     <>
                       <Heart size={13} className="text-red-500 fill-red-500 shrink-0" />
                       <span className="text-sm text-stone-600">좋아요를 눌렀어요</span>
+                    </>
+                  ) : notification.type === "application" ? (
+                    <>
+                      <ClipboardList size={13} className="text-amber-600 shrink-0" />
+                      <span className="text-sm text-stone-600">신청했어요</span>
+                    </>
+                  ) : notification.type === "follow" ? (
+                    <>
+                      <UserPlus size={13} className="text-blue-500 shrink-0" />
+                      <span className="text-sm text-stone-600">팔로우했어요</span>
                     </>
                   ) : (
                     <>

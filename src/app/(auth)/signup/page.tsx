@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { WoojuSoulLogo } from "@/components/ui/Logo";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -49,7 +49,7 @@ export default function SignupPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-amber-50 px-4">
       <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-sm">
         <div className="mb-8 flex flex-col items-center gap-2">
-          <WoojuSoulLogo size={56} />
+          <Image src="/woojusoulicon.png" alt="우주소울" width={64} height={64} style={{ mixBlendMode: "multiply" }} />
           <h1 className="text-2xl font-bold text-stone-900">우주소울 가입하기</h1>
           <p className="text-sm text-stone-500">유기동물과 사람을 잇는 여정을 시작해요</p>
         </div>

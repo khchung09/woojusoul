@@ -28,7 +28,6 @@ export default async function FeedPage() {
       *,
       profiles (
         username,
-        display_name,
         avatar_url,
         is_blinded
       )

@@ -13,18 +13,17 @@ export interface Database {
         Row: {
           id: string;
           username: string;
-          display_name: string | null;
           avatar_url: string | null;
           bio: string | null;
           is_verified: boolean;
           is_blinded: boolean;
+          username_updated_at: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id: string;
           username: string;
-          display_name?: string | null;
           avatar_url?: string | null;
           bio?: string | null;
           is_verified?: boolean;
@@ -34,10 +33,11 @@ export interface Database {
         Update: {
           id?: string;
           username?: string;
-          display_name?: string | null;
           avatar_url?: string | null;
           bio?: string | null;
           is_verified?: boolean;
+          is_blinded?: boolean;
+          username_updated_at?: string | null;
           updated_at?: string;
         };
         Relationships: [];
@@ -163,6 +163,28 @@ export interface Database {
         };
         Relationships: [];
       };
+      applications: {
+        Row: {
+          id: string;
+          post_id: string;
+          applicant_id: string;
+          message: string;
+          status: "pending" | "accepted" | "rejected";
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          applicant_id: string;
+          message: string;
+          status?: "pending" | "accepted" | "rejected";
+          created_at?: string;
+        };
+        Update: {
+          status?: "pending" | "accepted" | "rejected";
+        };
+        Relationships: [];
+      };
       reports: {
         Row: {
           id: string;
@@ -183,13 +205,29 @@ export interface Database {
         Update: Record<string, never>;
         Relationships: [];
       };
+      follows: {
+        Row: {
+          id: string;
+          follower_id: string;
+          following_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          follower_id: string;
+          following_id: string;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
       notifications: {
         Row: {
           id: string;
           recipient_id: string;
           actor_id: string;
-          post_id: string;
-          type: "like" | "comment";
+          post_id: string | null;
+          type: "like" | "comment" | "application" | "follow";
           is_read: boolean;
           created_at: string;
         };
@@ -197,8 +235,8 @@ export interface Database {
           id?: string;
           recipient_id: string;
           actor_id: string;
-          post_id: string;
-          type: "like" | "comment";
+          post_id?: string | null;
+          type: "like" | "comment" | "application" | "follow";
           is_read?: boolean;
           created_at?: string;
         };

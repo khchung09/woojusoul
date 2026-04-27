@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { WoojuSoulLogo } from "@/components/ui/Logo";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import OnboardingOverlay from "@/components/OnboardingOverlay";
 
 function KakaoIcon() {
   return (
@@ -54,11 +55,13 @@ export default function LoginPage() {
   }
 
   return (
+    <>
+    <OnboardingOverlay />
     <div className="flex min-h-screen flex-col items-center justify-center bg-amber-50 px-4">
       <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-sm">
         <div className="mb-8 flex flex-col items-center gap-2">
-          <WoojuSoulLogo size={56} />
-          <h1 className="text-2xl font-bold text-stone-900">우주소울에 오신 것을 환영해요</h1>
+          <Image src="/woojusoulicon.png" alt="우주소울" width={88} height={88} style={{ mixBlendMode: "multiply" }} />
+          <h1 className="text-lg font-bold text-stone-900">우주소울에 오신 것을 환영해요</h1>
           <p className="text-sm text-stone-500">유기동물과 사람을 잇는 따뜻한 공간</p>
         </div>
 
@@ -112,5 +115,6 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+    </>
   );
 }

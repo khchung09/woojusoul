@@ -3,6 +3,14 @@ import type { PostWithAuthor } from "@/types/models";
 import SearchClient from "./SearchClient";
 
 type PostTypeKey = "all" | "general" | "report" | "temp_protect" | "adoption";
+type Mode = "posts" | "neighborhood" | "users";
+
+export type UserResult = {
+  id: string;
+  username: string;
+  avatar_url: string | null;
+  is_verified: boolean;
+};
 
 interface Props {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -15,7 +23,10 @@ export default async function SearchPage({ searchParams }: Props) {
   const postType: PostTypeKey = ["general", "report", "temp_protect", "adoption"].includes(rawType)
     ? (rawType as PostTypeKey)
     : "all";
-  const mode = params.mode === "neighborhood" ? "neighborhood" : "posts";
+  const rawMode = params.mode as string;
+  const mode: Mode = rawMode === "neighborhood" ? "neighborhood"
+    : rawMode === "users" ? "users"
+    : "posts";
 
   const supabase = await createClient();
 
@@ -35,12 +46,21 @@ export default async function SearchPage({ searchParams }: Props) {
   const likedPostIds = likesData?.map((l) => l.post_id) ?? [];
 
   let posts: PostWithAuthor[] = [];
+  let users: UserResult[] = [];
 
   if (q) {
-    if (mode === "neighborhood") {
+    if (mode === "users") {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, username, avatar_url, is_verified")
+        .ilike("username", `%${q}%`)
+        .order("username", { ascending: true })
+        .limit(30);
+      users = (data as UserResult[]) ?? [];
+    } else if (mode === "neighborhood") {
       const { data } = await supabase
         .from("posts")
-        .select(`*, profiles(username, display_name, avatar_url, is_blinded)`)
+        .select(`*, profiles(username, avatar_url, is_blinded)`)
         .eq("post_type", "report")
         .ilike("location_address", `%${q}%`)
         .order("created_at", { ascending: false })
@@ -49,7 +69,7 @@ export default async function SearchPage({ searchParams }: Props) {
     } else {
       let query = supabase
         .from("posts")
-        .select(`*, profiles(username, display_name, avatar_url, is_blinded)`)
+        .select(`*, profiles(username, avatar_url, is_blinded)`)
         .ilike("content", `%${q}%`)
         .order("created_at", { ascending: false })
         .limit(30);
@@ -72,6 +92,7 @@ export default async function SearchPage({ searchParams }: Props) {
       initialType={postType}
       initialMode={mode}
       posts={posts}
+      users={users}
       isVerified={isVerified}
       currentUserId={user?.id ?? null}
       likedPostIds={likedPostIds}

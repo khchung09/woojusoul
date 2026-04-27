@@ -36,7 +36,6 @@ export default async function ProfilePage() {
       *,
       profiles (
         username,
-        display_name,
         avatar_url,
         is_blinded
       )
@@ -51,6 +50,11 @@ export default async function ProfilePage() {
     .select("post_id")
     .eq("user_id", user.id);
   const likedPostIds = new Set(likesData?.map((l) => l.post_id) ?? []);
+
+  const [{ count: followerCount }, { count: followingCount }] = await Promise.all([
+    supabase.from("follows").select("id", { count: "exact", head: true }).eq("following_id", user.id),
+    supabase.from("follows").select("id", { count: "exact", head: true }).eq("follower_id", user.id),
+  ]);
 
   const petsContent =
     pets.length === 0 ? (
@@ -100,6 +104,8 @@ export default async function ProfilePage() {
         userEmail={user.email ?? ""}
         postCount={posts.length}
         petCount={pets.length}
+        followerCount={followerCount ?? 0}
+        followingCount={followingCount ?? 0}
       />
       <ProfileTabs petsContent={petsContent} postsContent={postsContent} />
     </div>

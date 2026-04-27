@@ -4,7 +4,8 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import PostCard from "@/components/PostCard";
 import CommentSection from "./CommentSection";
-import type { PostWithAuthor, CommentWithAuthor } from "@/types/models";
+import ApplicationList from "./ApplicationList";
+import type { PostWithAuthor, CommentWithAuthor, ApplicationWithApplicant } from "@/types/models";
 
 export default async function PostDetailPage({
   params,
@@ -22,11 +23,11 @@ export default async function PostDetailPage({
     await Promise.all([
       supabase
         .from("posts")
-        .select("*, profiles(username, display_name, avatar_url, is_blinded)")
+        .select("*, profiles(username, avatar_url, is_blinded)")
         .eq("id", id)
         .single(),
       user
-        ? supabase.from("profiles").select("is_verified, display_name").eq("id", user.id).single()
+        ? supabase.from("profiles").select("is_verified, username").eq("id", user.id).single()
         : Promise.resolve({ data: null }),
       supabase
         .from("comments")
@@ -43,6 +44,19 @@ export default async function PostDetailPage({
   const post = postData as PostWithAuthor;
   const comments = (commentsData ?? []) as CommentWithAuthor[];
   const initialLiked = !!likeData;
+
+  const isOwner = user?.id === post.author_id;
+  const isApplyable = post.post_type === "temp_protect" || post.post_type === "adoption";
+
+  const { data: applicationsData } = isOwner && isApplyable
+    ? await supabase
+        .from("applications")
+        .select("*, applicant:profiles!applicant_id(username, display_name, avatar_url)")
+        .eq("post_id", id)
+        .order("created_at", { ascending: false })
+    : { data: null };
+
+  const applications = (applicationsData ?? []) as ApplicationWithApplicant[];
 
   return (
     <div className="flex flex-col gap-4">
@@ -69,8 +83,12 @@ export default async function PostDetailPage({
         postId={id}
         comments={comments}
         currentUserId={user?.id ?? null}
-        currentUserDisplayName={profile?.display_name ?? null}
+        currentUsername={profile?.username ?? null}
       />
+
+      {isOwner && isApplyable && (
+        <ApplicationList applications={applications} />
+      )}
     </div>
   );
 }
