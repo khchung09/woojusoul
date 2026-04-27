@@ -35,20 +35,22 @@ export function NotificationBell() {
       await fetchCount(user.id);
       if (cancelled) return;
 
-      // .on() 을 모두 등록한 뒤 .subscribe() 호출
-      const channel = supabase.channel(`notif-bell:${user.id}`);
-      channel.on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "notifications",
-          filter: `recipient_id=eq.${user.id}`,
-        },
-        () => fetchCount(user.id)
-      );
-      channel.subscribe();
-      channelRef = channel;
+      // Math.random()으로 채널 이름을 유일하게 만들어
+      // 이전 채널이 완전히 정리되기 전 같은 이름으로 재구독할 때
+      // 발생하는 "cannot add postgres_changes callbacks after subscribe()" 방지
+      channelRef = supabase
+        .channel(`notif-bell:${user.id}:${Math.random()}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "notifications",
+            filter: `recipient_id=eq.${user.id}`,
+          },
+          () => fetchCount(user.id)
+        )
+        .subscribe();
     }
 
     setup();
