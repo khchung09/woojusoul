@@ -92,7 +92,16 @@ function parseImageUrls(imageUrl: string | null): string[] {
   return [imageUrl];
 }
 
-function AuthorAvatar({ name }: { name: string }) {
+function AuthorAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string | null }) {
+  if (avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={name}
+        className="h-9 w-9 shrink-0 rounded-full object-cover shadow-sm"
+      />
+    );
+  }
   return (
     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white font-bold text-sm shadow-sm">
       {name[0]}
@@ -322,7 +331,7 @@ export default function PostCard({
                 router.push(isOwn ? "/profile" : `/profile/${post.author_id}`);
               }}
             >
-              <AuthorAvatar name={authorName} />
+              <AuthorAvatar name={authorName} avatarUrl={post.profiles?.avatar_url} />
               <div>
                 <p className="text-sm font-semibold text-stone-900 hover:underline">
                   @{authorName}
