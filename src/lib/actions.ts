@@ -10,7 +10,7 @@ async function createNotification(
   recipientId: string,
   actorId: string,
   postId: string | null,
-  type: "like" | "comment" | "application" | "follow"
+  type: "like" | "comment" | "application" | "follow" | "mention"
 ) {
   if (recipientId === actorId) return;
   await supabase.from("notifications").insert({
@@ -19,6 +19,29 @@ async function createNotification(
     post_id: postId,
     type,
   });
+}
+
+function extractMentions(text: string): string[] {
+  const matches = text.match(/@(\w+)/g) ?? [];
+  return [...new Set(matches.map((m) => m.slice(1)))];
+}
+
+async function sendMentionNotifications(
+  supabase: SupabaseClient,
+  content: string,
+  actorId: string,
+  postId: string
+): Promise<void> {
+  const usernames = extractMentions(content);
+  if (usernames.length === 0) return;
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id")
+    .in("username", usernames);
+  if (!profiles) return;
+  for (const profile of profiles) {
+    await createNotification(supabase, profile.id, actorId, postId, "mention");
+  }
 }
 
 function parseImageUrls(imageUrl: string | null): string[] {
@@ -109,6 +132,7 @@ export async function addComment(postId: string, content: string): Promise<void>
       .eq("id", postId);
     await createNotification(supabase, post.author_id, user.id, postId, "comment");
   }
+  await sendMentionNotifications(supabase, content, user.id, postId);
 
   revalidatePath(`/posts/${postId}`);
   revalidatePath("/feed");
@@ -337,6 +361,38 @@ export async function markAllNotificationsRead(): Promise<void> {
     .eq("is_read", false);
 
   revalidatePath("/notifications");
+}
+
+export async function createPost(postData: {
+  content: string;
+  image_url: string | null;
+  post_type: "general" | "report" | "temp_protect" | "adoption";
+  location: string | null;
+  location_address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  animal_type: "cat" | "dog" | "other" | null;
+  animal_status: "rescue_needed" | "protected" | "rescued" | null;
+}): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "로그인이 필요합니다" };
+
+  const { data, error } = await supabase
+    .from("posts")
+    .insert({ author_id: user.id, ...postData })
+    .select("id")
+    .single();
+
+  if (error || !data) return { error: "게시물을 올리지 못했어요. 다시 시도해 주세요." };
+
+  await sendMentionNotifications(supabase, postData.content, user.id, data.id);
+
+  revalidatePath("/feed");
+  revalidatePath("/profile");
+  return {};
 }
 
 export async function deletePost(postId: string, imageUrl: string | null): Promise<void> {

@@ -227,7 +227,7 @@ export interface Database {
           recipient_id: string;
           actor_id: string;
           post_id: string | null;
-          type: "like" | "comment" | "application" | "follow";
+          type: "like" | "comment" | "application" | "follow" | "mention";
           is_read: boolean;
           created_at: string;
         };
@@ -236,7 +236,7 @@ export interface Database {
           recipient_id: string;
           actor_id: string;
           post_id?: string | null;
-          type: "like" | "comment" | "application" | "follow";
+          type: "like" | "comment" | "application" | "follow" | "mention";
           is_read?: boolean;
           created_at?: string;
         };

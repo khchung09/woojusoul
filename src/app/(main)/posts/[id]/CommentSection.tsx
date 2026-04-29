@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect, useTransition, useRef } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, Send } from "lucide-react";
 import { addComment, deleteComment } from "@/lib/actions";
 import { formatDistanceToNow } from "@/lib/dateUtils";
 import type { CommentWithAuthor } from "@/types/models";
+import { MentionInput } from "@/components/MentionInput";
+import { MentionText } from "@/components/MentionText";
 
 type Props = {
   postId: string;
@@ -33,7 +35,6 @@ export default function CommentSection({
   const [input, setInput] = useState("");
   const [adding, startAddTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // 서버 재검증 후 새 데이터를 반영
   useEffect(() => {
@@ -127,9 +128,10 @@ export default function CommentSection({
                     </button>
                   )}
                 </div>
-                <p className="mt-0.5 text-sm text-stone-700 leading-relaxed whitespace-pre-wrap break-words">
-                  {comment.content}
-                </p>
+                <MentionText
+                  text={comment.content}
+                  className="mt-0.5 text-sm text-stone-700 leading-relaxed whitespace-pre-wrap break-words"
+                />
               </div>
             </div>
           );
@@ -142,10 +144,9 @@ export default function CommentSection({
           onSubmit={handleAdd}
           className="flex items-end gap-2 border-t border-stone-100 px-4 py-3"
         >
-          <textarea
-            ref={inputRef}
+          <MentionInput
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={setInput}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -156,7 +157,8 @@ export default function CommentSection({
             rows={1}
             maxLength={500}
             disabled={adding}
-            className="flex-1 resize-none rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-amber-300 disabled:opacity-50 leading-relaxed"
+            wrapperClassName="flex-1 min-w-0"
+            className="w-full resize-none rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-amber-300 disabled:opacity-50 leading-relaxed"
           />
           <button
             type="submit"

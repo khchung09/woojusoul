@@ -6,7 +6,8 @@ import { ArrowLeft, X, ImagePlus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { LocationPicker, type LocationData } from "@/components/LocationPicker";
-import { updatePost } from "@/lib/actions";
+import { updatePost, createPost } from "@/lib/actions";
+import { MentionInput } from "@/components/MentionInput";
 
 type PostType = "general" | "report" | "temp_protect" | "adoption";
 type AnimalSpecies = "cat" | "dog" | "other";
@@ -346,11 +347,8 @@ function WritePageContent() {
         await updatePost(editPostId, postData, removedImageUrls);
         router.back();
       } else {
-        const { error: insertErr } = await supabase.from("posts").insert({
-          author_id: user.id,
-          ...postData,
-        });
-        if (insertErr) throw new Error("게시물을 올리지 못했어요. 다시 시도해 주세요.");
+        const result = await createPost(postData);
+        if (result.error) throw new Error(result.error);
         router.push("/feed");
         router.refresh();
       }
@@ -417,9 +415,9 @@ function WritePageContent() {
       {isComplex && (
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">상세 내용</p>
       )}
-      <textarea
+      <MentionInput
         value={activeContent}
-        onChange={(e) => (isComplex ? setDescription(e.target.value) : setContent(e.target.value))}
+        onChange={(v) => (isComplex ? setDescription(v) : setContent(v))}
         placeholder={
           isComplex
             ? "추가로 전달하고 싶은 내용을 자유롭게 적어주세요 (선택)"
@@ -428,6 +426,7 @@ function WritePageContent() {
             : "오늘 반려동물과 있었던 일을 공유해보세요 🐾"
         }
         rows={isComplex ? 4 : 6}
+        wrapperClassName="w-full"
         className="w-full resize-none text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none leading-relaxed"
         autoFocus={!isComplex}
       />

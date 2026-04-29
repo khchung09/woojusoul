@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { Heart, MessageCircle, Bell, ClipboardList, UserPlus } from "lucide-react";
+import { Heart, MessageCircle, Bell, ClipboardList, UserPlus, AtSign } from "lucide-react";
 import { formatDistanceToNow } from "@/lib/dateUtils";
 import { markNotificationRead, markAllNotificationsRead } from "@/lib/actions";
 import type { NotificationWithActor } from "@/types/models";
@@ -127,6 +127,11 @@ export default function NotificationList({ notifications, unreadCount }: Props) 
                     <>
                       <UserPlus size={13} className="text-blue-500 shrink-0" />
                       <span className="text-sm text-stone-600">팔로우했어요</span>
+                    </>
+                  ) : notification.type === "mention" ? (
+                    <>
+                      <AtSign size={13} className="shrink-0 text-[#6b7c2a]" />
+                      <span className="text-sm text-stone-600">회원님을 언급했어요</span>
                     </>
                   ) : (
                     <>

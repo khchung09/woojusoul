@@ -17,6 +17,7 @@ import { deletePost, toggleLike } from "@/lib/actions";
 import type { PostWithAuthor } from "@/types/models";
 import ReportModal from "@/components/ReportModal";
 import ApplicationModal from "@/components/ApplicationModal";
+import { MentionText } from "@/components/MentionText";
 
 type PostType = "general" | "report" | "temp_protect" | "adoption";
 
@@ -178,9 +179,10 @@ function AnimalInfoBlock({
       </div>
 
       {data.description && (
-        <p className="text-sm text-stone-700 leading-relaxed whitespace-pre-wrap">
-          {data.description}
-        </p>
+        <MentionText
+          text={data.description}
+          className="text-sm text-stone-700 leading-relaxed whitespace-pre-wrap"
+        />
       )}
     </div>
   );
@@ -438,9 +440,10 @@ export default function PostCard({
           {postType === "temp_protect" || postType === "adoption" ? (
             <AnimalInfoBlock content={post.content} type={postType} />
           ) : (
-            <p className="text-sm text-stone-700 leading-relaxed whitespace-pre-wrap">
-              {post.content}
-            </p>
+            <MentionText
+              text={post.content}
+              className="text-sm text-stone-700 leading-relaxed whitespace-pre-wrap"
+            />
           )}
 
           {/* 이미지 */}
