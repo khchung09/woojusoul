@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import { ReportMapView } from "@/components/ReportMapView";
 import { MapPin } from "lucide-react";
 import Link from "next/link";
@@ -10,29 +11,44 @@ export default async function MapPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("is_verified")
-    .eq("id", user!.id)
+    .select("is_verified, role")
+    .eq("id", user.id)
     .single();
 
-  const isVerified = profile?.is_verified ?? false;
+  const isAdmin = profile?.role === "admin";
 
-  const { data } = await supabase
-    .from("posts")
-    .select(
-      `*, profiles (username, display_name, avatar_url)`
-    )
-    .eq("post_type", "report")
-    .not("latitude", "is", null)
-    .not("longitude", "is", null)
-    .order("created_at", { ascending: false })
-    .limit(200);
+  const [{ data: postsData, error: postsError }, { data: approvedData }] = await Promise.all([
+    supabase
+      .from("posts")
+      // display_name 제거 — profiles에 해당 컬럼 없으면 쿼리 전체 실패
+      .select(`*, profiles (username, avatar_url)`)
+      .eq("post_type", "report")
+      .not("latitude", "is", null)
+      .not("longitude", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(200),
+    isAdmin
+      ? Promise.resolve({ data: [] })
+      : supabase
+          .from("location_requests")
+          .select("post_id")
+          .eq("requester_id", user.id)
+          .eq("status", "approved"),
+  ]);
 
-  const posts = ((data as PostWithAuthor[] | null) ?? []).filter(
+  if (postsError) {
+    console.error("[MapPage] posts 쿼리 실패:", postsError.message);
+  }
+
+  const posts = ((postsData as PostWithAuthor[] | null) ?? []).filter(
     (p): p is ReportPost => p.latitude !== null && p.longitude !== null
   );
+
+  const approvedPostIds = (approvedData ?? []).map((r) => r.post_id as string);
 
   return (
     <div className="flex flex-col gap-4">
@@ -43,7 +59,12 @@ export default async function MapPage() {
             유기동물 제보 위치를 지도에서 확인해요
           </p>
         </div>
-        {isVerified && (
+        {isAdmin && (
+          <span className="flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
+            👑 관리자
+          </span>
+        )}
+        {!isAdmin && profile?.is_verified && (
           <span className="flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
             ✓ 인증 회원
           </span>
@@ -69,7 +90,11 @@ export default async function MapPage() {
           </Link>
         </div>
       ) : (
-        <ReportMapView posts={posts} isVerified={isVerified} />
+        <ReportMapView
+          posts={posts}
+          approvedPostIds={approvedPostIds}
+          isAdmin={isAdmin}
+        />
       )}
     </div>
   );

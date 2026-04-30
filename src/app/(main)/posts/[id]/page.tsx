@@ -1,8 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
 import PostCard from "@/components/PostCard";
+import BackButton from "./BackButton";
 import CommentSection from "./CommentSection";
 import ApplicationList from "./ApplicationList";
 import type { PostWithAuthor, CommentWithAuthor, ApplicationWithApplicant } from "@/types/models";
@@ -21,13 +20,9 @@ export default async function PostDetailPage({
 
   const [{ data: postData }, { data: profile }, { data: commentsData }, { data: likeData }] =
     await Promise.all([
-      supabase
-        .from("posts")
-        .select("*, profiles(username, avatar_url, is_blinded)")
-        .eq("id", id)
-        .single(),
+      supabase.from("posts").select("*, profiles(username, avatar_url, is_blinded)").eq("id", id).single(),
       user
-        ? supabase.from("profiles").select("is_verified, username").eq("id", user.id).single()
+        ? supabase.from("profiles").select("is_verified, username, role").eq("id", user.id).single()
         : Promise.resolve({ data: null }),
       supabase
         .from("comments")
@@ -44,7 +39,6 @@ export default async function PostDetailPage({
   const post = postData as PostWithAuthor;
   const comments = (commentsData ?? []) as CommentWithAuthor[];
   const initialLiked = !!likeData;
-
   const isOwner = user?.id === post.author_id;
   const isApplyable = post.post_type === "temp_protect" || post.post_type === "adoption";
 
@@ -58,24 +52,46 @@ export default async function PostDetailPage({
 
   const applications = (applicationsData ?? []) as ApplicationWithApplicant[];
 
+  // 비로그인·본인 게시물·report 아닌 경우엔 불필요
+  const { data: locRequestData } =
+    user && post.post_type === "report" && user.id !== post.author_id
+      ? await supabase
+          .from("location_requests")
+          .select("status")
+          .eq("post_id", id)
+          .eq("requester_id", user.id)
+          .maybeSingle()
+      : { data: null };
+  const initialLocationRequest = (locRequestData?.status ?? null) as
+    | "pending" | "approved" | "rejected" | null;
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3">
-        <Link
-          href="/feed"
-          className="flex h-9 w-9 items-center justify-center rounded-xl text-stone-400 hover:bg-stone-100 transition-colors"
-          aria-label="뒤로 가기"
-        >
-          <ArrowLeft size={20} />
-        </Link>
-        <h1 className="text-base font-bold text-stone-800">게시물</h1>
+    <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+      {/* 헤더 */}
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+          background: "rgba(247,246,243,0.92)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+        }}
+      >
+        <BackButton />
+        <h1 style={{ fontSize: "17px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>게시물</h1>
       </div>
 
       <PostCard
         post={post}
         isVerified={profile?.is_verified ?? false}
+        isAdmin={profile?.role === "admin"}
         currentUserId={user?.id ?? null}
         initialLiked={initialLiked}
+        initialLocationRequest={initialLocationRequest}
         disableLink
       />
 

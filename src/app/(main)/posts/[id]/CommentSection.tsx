@@ -16,10 +16,31 @@ type Props = {
   currentUsername: string | null;
 };
 
-function CommentAvatar({ name }: { name: string }) {
+function CommentAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string | null }) {
+  if (avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={name}
+        style={{ width: "32px", height: "32px", borderRadius: "100px", objectFit: "cover", flexShrink: 0 }}
+      />
+    );
+  }
   return (
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white font-bold text-xs shadow-sm">
-      {name[0]}
+    <div
+      style={{
+        width: "32px",
+        height: "32px",
+        borderRadius: "100px",
+        background: "var(--accent-bg)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "14px",
+        flexShrink: 0,
+      }}
+    >
+      🐾
     </div>
   );
 }
@@ -36,7 +57,6 @@ export default function CommentSection({
   const [adding, startAddTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // 서버 재검증 후 새 데이터를 반영
   useEffect(() => {
     setComments(initialComments);
   }, [initialComments]);
@@ -44,11 +64,9 @@ export default function CommentSection({
   function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!input.trim() || !currentUserId) return;
-
     const text = input.trim();
     setInput("");
 
-    // 낙관적 업데이트
     const tempId = `temp-${Date.now()}`;
     setComments((prev) => [
       ...prev,
@@ -58,10 +76,7 @@ export default function CommentSection({
         author_id: currentUserId,
         content: text,
         created_at: new Date().toISOString(),
-        profiles: {
-          username: currentUsername ?? "나",
-          avatar_url: null,
-        },
+        profiles: { username: currentUsername ?? "나", avatar_url: null },
       },
     ]);
 
@@ -80,39 +95,66 @@ export default function CommentSection({
   }
 
   return (
-    <div className="rounded-2xl bg-white shadow-sm border border-stone-100">
-      <div className="px-5 pt-4 pb-2 border-b border-stone-50">
-        <p className="text-sm font-semibold text-stone-700">
+    <div
+      style={{
+        borderRadius: "var(--r-lg)",
+        background: "var(--surface)",
+        border: "1.5px solid var(--border)",
+        boxShadow: "var(--shadow-sm)",
+        overflow: "hidden",
+      }}
+    >
+      {/* 댓글 헤더 */}
+      <div
+        style={{
+          padding: "14px 18px",
+          borderBottom: "1px solid var(--surface-2)",
+        }}
+      >
+        <p style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
           댓글 {comments.length}개
         </p>
       </div>
 
       {/* 댓글 목록 */}
-      <div className="divide-y divide-stone-50">
+      <div>
         {comments.length === 0 && (
-          <p className="px-5 py-6 text-center text-sm text-stone-400">
+          <p
+            style={{
+              padding: "28px 18px",
+              textAlign: "center",
+              fontSize: "14px",
+              color: "var(--text-muted)",
+              margin: 0,
+            }}
+          >
             첫 댓글을 남겨보세요 🐾
           </p>
         )}
         {comments.map((comment) => {
           const authorName = comment.profiles?.username ?? "알 수 없음";
-          const isOwnComment =
-            !!currentUserId && currentUserId === comment.author_id;
+          const isOwnComment = !!currentUserId && currentUserId === comment.author_id;
           const isTemp = comment.id.startsWith("temp-");
 
           return (
             <div
               key={comment.id}
-              className={`flex gap-3 px-5 py-3.5 ${isTemp ? "opacity-60" : ""}`}
+              style={{
+                display: "flex",
+                gap: "10px",
+                padding: "14px 18px",
+                borderBottom: "1px solid var(--surface-2)",
+                opacity: isTemp ? 0.6 : 1,
+              }}
             >
-              <CommentAvatar name={authorName} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-xs font-semibold text-stone-800">
+              <CommentAvatar name={authorName} avatarUrl={comment.profiles?.avatar_url} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
+                    <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
                       @{authorName}
                     </span>
-                    <span className="text-xs text-stone-400">
+                    <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
                       {formatDistanceToNow(comment.created_at)}
                     </span>
                   </div>
@@ -121,7 +163,20 @@ export default function CommentSection({
                       type="button"
                       onClick={() => handleDelete(comment.id)}
                       disabled={deletingId === comment.id}
-                      className="shrink-0 p-1 text-stone-300 hover:text-red-400 transition-colors disabled:opacity-40"
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--text-muted)",
+                        padding: "4px",
+                        display: "flex",
+                        alignItems: "center",
+                        opacity: deletingId === comment.id ? 0.4 : 1,
+                        transition: "transform 0.12s ease",
+                      }}
+                      onMouseDown={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(0.88)"; }}
+                      onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
                       aria-label="댓글 삭제"
                     >
                       <Trash2 size={13} />
@@ -130,7 +185,7 @@ export default function CommentSection({
                 </div>
                 <MentionText
                   text={comment.content}
-                  className="mt-0.5 text-sm text-stone-700 leading-relaxed whitespace-pre-wrap break-words"
+                  style={{ fontSize: "14px", color: "var(--text-secondary)", lineHeight: "1.55", whiteSpace: "pre-wrap", wordBreak: "break-word", margin: 0 }}
                 />
               </div>
             </div>
@@ -138,11 +193,17 @@ export default function CommentSection({
         })}
       </div>
 
-      {/* 댓글 입력창 */}
+      {/* 댓글 입력 */}
       {currentUserId ? (
         <form
           onSubmit={handleAdd}
-          className="flex items-end gap-2 border-t border-stone-100 px-4 py-3"
+          style={{
+            display: "flex",
+            alignItems: "flex-end",
+            gap: "8px",
+            borderTop: "1.5px solid var(--border)",
+            padding: "12px 16px",
+          }}
         >
           <MentionInput
             value={input}
@@ -158,22 +219,57 @@ export default function CommentSection({
             maxLength={500}
             disabled={adding}
             wrapperClassName="flex-1 min-w-0"
-            className="w-full resize-none rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-amber-300 disabled:opacity-50 leading-relaxed"
+            style={{
+              width: "100%",
+              resize: "none",
+              borderRadius: "var(--r-pill)",
+              border: "1.5px solid var(--border)",
+              background: "var(--surface-2)",
+              padding: "10px 16px",
+              fontSize: "14px",
+              color: "var(--text-primary)",
+              fontFamily: "inherit",
+              outline: "none",
+              lineHeight: "1.4",
+            } as React.CSSProperties}
           />
           <button
             type="submit"
             disabled={!input.trim() || adding}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            style={{
+              width: "38px",
+              height: "38px",
+              borderRadius: "100px",
+              background: "var(--accent)",
+              border: "none",
+              color: "white",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              flexShrink: 0,
+              opacity: !input.trim() || adding ? 0.4 : 1,
+              transition: "opacity 0.15s ease, transform 0.12s ease",
+            }}
+            onMouseDown={(e) => { if (input.trim() && !adding) (e.currentTarget as HTMLElement).style.transform = "scale(0.9)"; }}
+            onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
             aria-label="댓글 등록"
           >
             <Send size={15} />
           </button>
         </form>
       ) : (
-        <div className="border-t border-stone-100 px-5 py-4 text-center">
-          <p className="text-sm text-stone-400">
+        <div
+          style={{
+            borderTop: "1.5px solid var(--border)",
+            padding: "16px 18px",
+            textAlign: "center",
+          }}
+        >
+          <p style={{ fontSize: "14px", color: "var(--text-muted)", margin: 0 }}>
             댓글을 작성하려면{" "}
-            <a href="/login" className="text-amber-500 font-medium hover:underline">
+            <a href="/login" style={{ color: "var(--accent)", fontWeight: 600, textDecoration: "none" }}>
               로그인
             </a>
             이 필요해요

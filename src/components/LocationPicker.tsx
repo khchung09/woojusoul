@@ -16,6 +16,8 @@ interface Props {
   initial?: LocationData;
 }
 
+const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 };
+
 export function LocationPicker({ onSelect, initial }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<KakaoMap | null>(null);
@@ -23,15 +25,39 @@ export function LocationPicker({ onSelect, initial }: Props) {
   const isLoaded = useKakaoMaps();
   const [selectedData, setSelectedData] = useState<LocationData | null>(initial ?? null);
   const [geocoding, setGeocoding] = useState(false);
+  // initial(수정 모드)이면 geolocation 스킵, 아니면 위치 확인 대기
+  const [geoLoading, setGeoLoading] = useState(!initial);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
 
+  // 1. 마운트 시 현재 위치 요청 (initial 없을 때만)
   useEffect(() => {
-    if (!isLoaded || !containerRef.current || mapRef.current) return;
+    if (initial) return;
+    if (!navigator.geolocation) {
+      setGeoLoading(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGeoLoading(false);
+      },
+      () => {
+        // 실패·권한 거부 → 기본값(서울) 유지
+        setGeoLoading(false);
+      },
+      { timeout: 5000, maximumAge: 60_000 }
+    );
+  }, []);
+
+  // 2. SDK 로드 완료 + 위치 확인 완료 후 지도 초기화
+  useEffect(() => {
+    if (!isLoaded) return;                          // SDK 완전 초기화 전 차단
+    if (geoLoading) return;                         // 위치 확인 완료 전 차단
+    if (!containerRef.current || mapRef.current) return;
 
     const { kakao } = window;
-    const center = initial
-      ? new kakao.maps.LatLng(initial.lat, initial.lng)
-      : new kakao.maps.LatLng(37.5665, 126.978);
-
+    const coords = initial ?? userCoords ?? DEFAULT_CENTER;
+    const center = new kakao.maps.LatLng(coords.lat, coords.lng);
     const map = new kakao.maps.Map(containerRef.current, { center, level: 4 });
     mapRef.current = map;
 
@@ -55,7 +81,7 @@ export function LocationPicker({ onSelect, initial }: Props) {
       }
       geocodeLocation(latLng);
     });
-  }, [isLoaded]);
+  }, [isLoaded, geoLoading]);
 
   function geocodeLocation(latlng: KakaoLatLng) {
     const { kakao } = window;
@@ -94,12 +120,17 @@ export function LocationPicker({ onSelect, initial }: Props) {
     });
   }
 
+  const showOverlay = !isLoaded || geoLoading;
+
   return (
     <div className="flex flex-col gap-2">
       <div className="relative w-full overflow-hidden rounded-xl border border-red-100" style={{ height: 260 }}>
-        {!isLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center bg-stone-100">
+        {showOverlay && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1.5 bg-stone-100">
             <Loader2 size={20} className="animate-spin text-stone-400" />
+            {isLoaded && geoLoading && (
+              <span className="text-xs text-stone-400">위치 가져오는 중...</span>
+            )}
           </div>
         )}
         <div ref={containerRef} className="h-full w-full" />

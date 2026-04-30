@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { PawPrint } from "lucide-react";
+import Link from "next/link";
 import type { Profile, Pet, PostWithAuthor } from "@/types/models";
 import ProfileEditor from "./ProfileEditor";
 import ProfileTabs from "./ProfileTabs";
+import VerificationSection from "./VerificationSection";
 import PostCard from "@/components/PostCard";
 
 export default async function ProfilePage() {
@@ -23,32 +24,18 @@ export default async function ProfilePage() {
   const profile = profileData as Profile | null;
   if (!profile) redirect("/login");
 
-  const { data: petsData } = await supabase
-    .from("pets")
-    .select("*")
-    .eq("owner_id", user.id);
-
+  const { data: petsData } = await supabase.from("pets").select("*").eq("owner_id", user.id);
   const pets = (petsData ?? []) as Pet[];
 
   const { data: postsData } = await supabase
     .from("posts")
-    .select(`
-      *,
-      profiles (
-        username,
-        avatar_url,
-        is_blinded
-      )
-    `)
+    .select(`*, profiles(username, avatar_url, is_blinded)`)
     .eq("author_id", user.id)
     .order("created_at", { ascending: false });
 
   const posts = (postsData ?? []) as PostWithAuthor[];
 
-  const { data: likesData } = await supabase
-    .from("likes")
-    .select("post_id")
-    .eq("user_id", user.id);
+  const { data: likesData } = await supabase.from("likes").select("post_id").eq("user_id", user.id);
   const likedPostIds = new Set(likesData?.map((l) => l.post_id) ?? []);
 
   const [{ count: followerCount }, { count: followingCount }] = await Promise.all([
@@ -58,20 +45,68 @@ export default async function ProfilePage() {
 
   const petsContent =
     pets.length === 0 ? (
-      <div className="flex flex-col items-center justify-center rounded-2xl bg-white py-10 shadow-sm text-stone-400">
-        <PawPrint size={36} className="mb-2 opacity-30" />
-        <p className="text-sm">등록된 반려동물이 없어요</p>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "48px 0",
+          gap: "10px",
+        }}
+      >
+        <div
+          style={{
+            width: "64px",
+            height: "64px",
+            borderRadius: "100px",
+            background: "var(--accent-bg)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "28px",
+          }}
+        >
+          🐾
+        </div>
+        <p style={{ fontSize: "15px", fontWeight: 600, color: "var(--text-secondary)", margin: 0 }}>
+          반려동물이 없어요
+        </p>
+        <p style={{ fontSize: "13px", color: "var(--text-muted)", margin: 0 }}>
+          함께하는 친구를 등록해보세요
+        </p>
       </div>
-    ) : (
-      <div className="grid grid-cols-2 gap-3">
+  ) : (
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
         {pets.map((pet) => (
-          <div key={pet.id} className="rounded-2xl bg-white p-4 shadow-sm">
-            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-xl">
+          <div
+            key={pet.id}
+            style={{
+              borderRadius: "var(--r-lg)",
+              background: "var(--surface)",
+              border: "1.5px solid var(--border)",
+              padding: "16px",
+              boxShadow: "var(--shadow-sm)",
+            }}
+          >
+            <div
+              style={{
+                width: "44px",
+                height: "44px",
+                borderRadius: "100px",
+                background: "var(--accent-bg)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "22px",
+                marginBottom: "10px",
+              }}
+            >
               {pet.species === "dog" ? "🐶" : pet.species === "cat" ? "🐱" : "🐾"}
             </div>
-            <p className="font-semibold text-stone-900">{pet.name}</p>
-            <p className="text-xs text-stone-400">{pet.breed ?? pet.species}</p>
-            {pet.age && <p className="text-xs text-stone-400">{pet.age}살</p>}
+            <p style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", margin: "0 0 3px" }}>{pet.name}</p>
+            <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0 }}>{pet.breed ?? pet.species}</p>
+            {pet.age && <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: "2px 0 0" }}>{pet.age}살</p>}
           </div>
         ))}
       </div>
@@ -79,17 +114,60 @@ export default async function ProfilePage() {
 
   const postsContent =
     posts.length === 0 ? (
-      <div className="flex flex-col items-center justify-center rounded-2xl bg-white py-10 shadow-sm text-stone-400">
-        <PawPrint size={36} className="mb-2 opacity-30" />
-        <p className="text-sm">아직 게시물이 없어요</p>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "48px 0",
+          gap: "10px",
+        }}
+      >
+        <div
+          style={{
+            width: "64px",
+            height: "64px",
+            borderRadius: "100px",
+            background: "var(--accent-bg)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "28px",
+          }}
+        >
+          📝
+        </div>
+        <p style={{ fontSize: "15px", fontWeight: 600, color: "var(--text-secondary)", margin: 0 }}>
+          아직 게시물이 없어요
+        </p>
+        <p style={{ fontSize: "13px", color: "var(--text-muted)", margin: 0 }}>
+          첫 번째 이야기를 공유해보세요
+        </p>
+        <Link
+          href="/write"
+          style={{
+            marginTop: "4px",
+            borderRadius: "var(--r-pill)",
+            background: "var(--accent)",
+            color: "white",
+            padding: "10px 22px",
+            fontSize: "13px",
+            fontWeight: 600,
+            textDecoration: "none",
+          }}
+        >
+          글 쓰기
+        </Link>
       </div>
     ) : (
-      <div className="flex flex-col gap-5">
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {posts.map((post) => (
           <PostCard
             key={post.id}
             post={post}
             isVerified={profile.is_verified}
+            isAdmin={profile.role === "admin"}
             currentUserId={user.id}
             initialLiked={likedPostIds.has(post.id)}
           />
@@ -98,7 +176,7 @@ export default async function ProfilePage() {
     );
 
   return (
-    <div className="flex flex-col gap-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       <ProfileEditor
         profile={profile}
         userEmail={user.email ?? ""}
@@ -106,6 +184,11 @@ export default async function ProfilePage() {
         petCount={pets.length}
         followerCount={followerCount ?? 0}
         followingCount={followingCount ?? 0}
+      />
+      <VerificationSection
+        isVerified={profile.is_verified}
+        initialRealName={profile.real_name ?? null}
+        initialPhone={profile.phone ?? null}
       />
       <ProfileTabs petsContent={petsContent} postsContent={postsContent} />
     </div>

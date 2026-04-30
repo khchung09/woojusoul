@@ -34,3 +34,5 @@ export type NotificationWithActor = Notification & {
   post: Pick<Post, "id" | "content" | "post_type"> | null;
 };
 
+export type LocationRequest = Database["public"]["Tables"]["location_requests"]["Row"];
+

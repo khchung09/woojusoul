@@ -39,6 +39,8 @@ interface KakaoMap {
   getCenter(): KakaoLatLng;
   getLevel(): number;
   setLevel(level: number): void;
+  setDraggable(draggable: boolean): void;
+  setZoomable(zoomable: boolean): void;
 }
 
 interface KakaoLatLng {

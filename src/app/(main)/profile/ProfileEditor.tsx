@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useTransition } from "react";
-import { Mail, Camera, Pencil, X, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Mail, Camera, X, Check, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { updateProfile, updateUsername } from "./actions";
 import type { Profile } from "@/types/models";
@@ -16,6 +17,7 @@ type Props = {
 };
 
 export default function ProfileEditor({ profile, userEmail, postCount, petCount, followerCount, followingCount }: Props) {
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [username, setUsername] = useState(profile.username);
   const [bio, setBio] = useState(profile.bio ?? "");
@@ -25,6 +27,12 @@ export default function ProfileEditor({ profile, userEmail, postCount, petCount,
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleLogout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+  }
 
   const lastChanged = profile.username_updated_at;
   const daysSince = lastChanged
@@ -59,10 +67,7 @@ export default function ProfileEditor({ profile, userEmail, postCount, petCount,
             return;
           }
           const result = await updateUsername(username);
-          if (result.error) {
-            setError(result.error);
-            return;
-          }
+          if (result.error) { setError(result.error); return; }
         }
 
         let finalAvatarUrl: string | null = avatarUrl || null;
@@ -78,7 +83,6 @@ export default function ProfileEditor({ profile, userEmail, postCount, petCount,
         }
 
         await updateProfile({ bio, avatar_url: finalAvatarUrl });
-
         setAvatarUrl(finalAvatarUrl ?? "");
         setAvatarPreview(null);
         setAvatarFile(null);
@@ -92,19 +96,57 @@ export default function ProfileEditor({ profile, userEmail, postCount, petCount,
   const currentAvatar = avatarPreview ?? avatarUrl;
 
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-sm">
-      <div className="flex items-start gap-4">
-        {/* 아바타 */}
-        <div className="relative shrink-0">
+    <div
+      style={{
+        borderRadius: "var(--r-lg)",
+        background: "var(--surface)",
+        border: "1.5px solid var(--border)",
+        boxShadow: "var(--shadow-sm)",
+        overflow: "hidden",
+      }}
+    >
+      {/* 배너 */}
+      <div
+        style={{
+          height: "120px",
+          background: "linear-gradient(135deg, var(--accent-bg) 0%, #D4E8C2 100%)",
+          position: "relative",
+        }}
+      />
+
+      {/* 프로필 영역 */}
+      <div style={{ padding: "0 20px 24px" }}>
+        {/* 아바타 (배너에 overlap) */}
+        <div style={{ position: "relative", display: "inline-block", marginTop: "-40px", marginBottom: "12px" }}>
           {currentAvatar ? (
             <img
               src={currentAvatar}
               alt="프로필 사진"
-              className="h-16 w-16 rounded-full object-cover ring-2 ring-amber-100"
+              style={{
+                width: "80px",
+                height: "80px",
+                borderRadius: "100px",
+                objectFit: "cover",
+                border: "3px solid var(--surface)",
+                boxShadow: "var(--shadow-md)",
+              }}
             />
           ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-2xl font-bold text-amber-600">
-              {profile.username[0]?.toUpperCase() ?? "?"}
+            <div
+              style={{
+                width: "80px",
+                height: "80px",
+                borderRadius: "100px",
+                background: "var(--accent-bg)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "32px",
+                border: "3px solid var(--surface)",
+                boxShadow: "var(--shadow-md)",
+              }}
+            >
+              🐾
             </div>
           )}
           {isEditing && (
@@ -112,127 +154,249 @@ export default function ProfileEditor({ profile, userEmail, postCount, petCount,
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-white shadow-md hover:bg-amber-600 transition-colors"
+                style={{
+                  position: "absolute",
+                  bottom: "2px",
+                  right: "2px",
+                  width: "26px",
+                  height: "26px",
+                  borderRadius: "100px",
+                  background: "var(--accent)",
+                  color: "white",
+                  border: "2px solid var(--surface)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                }}
               >
                 <Camera size={12} />
               </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileChange}
-              />
+              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileChange} />
             </>
           )}
         </div>
 
-        {/* 아이디 / 수정 */}
-        <div className="flex-1 min-w-0">
-          {isEditing ? (
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-base font-semibold text-stone-400">@</span>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value.toLowerCase())}
-                  disabled={!canChangeUsername}
-                  maxLength={20}
-                  className="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-1.5 text-base font-semibold text-stone-900 focus:border-amber-400 focus:bg-white focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                />
+        {/* 이름 + 수정 버튼 */}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {isEditing ? (
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                  <span style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-muted)" }}>@</span>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                    disabled={!canChangeUsername}
+                    maxLength={20}
+                    style={{
+                      flex: 1,
+                      borderRadius: "var(--r-md)",
+                      border: "1.5px solid var(--border)",
+                      background: "var(--surface-2)",
+                      padding: "8px 12px",
+                      fontSize: "16px",
+                      fontWeight: 700,
+                      color: "var(--text-primary)",
+                      fontFamily: "inherit",
+                      outline: "none",
+                      opacity: canChangeUsername ? 1 : 0.5,
+                    }}
+                  />
+                </div>
+                {!canChangeUsername && (
+                  <p style={{ marginTop: "4px", fontSize: "12px", color: "var(--text-muted)" }}>
+                    {daysLeft}일 후 변경 가능해요
+                  </p>
+                )}
               </div>
-              {!canChangeUsername && (
-                <p className="mt-1 text-xs text-stone-400">{daysLeft}일 후 변경 가능해요</p>
-              )}
-            </div>
-          ) : (
-            <h1 className="text-xl font-bold text-stone-900 truncate">
-              @{profile.username}
-            </h1>
+            ) : (
+              <h1 style={{ fontSize: "22px", fontWeight: 800, color: "var(--text-primary)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                @{profile.username}
+              </h1>
+            )}
+          </div>
+
+          {!isEditing && (
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              style={{
+                borderRadius: "var(--r-pill)",
+                border: "1.5px solid var(--border)",
+                background: "var(--surface)",
+                padding: "7px 16px",
+                fontSize: "13px",
+                fontWeight: 600,
+                color: "var(--text-secondary)",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                transition: "transform 0.12s ease",
+                flexShrink: 0,
+              }}
+            >
+              프로필 편집
+            </button>
           )}
         </div>
 
-        {!isEditing && (
-          <button
-            type="button"
-            onClick={() => setIsEditing(true)}
-            className="flex items-center gap-1.5 rounded-xl bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-600 hover:bg-stone-200 transition-colors"
+        {/* 자기소개 */}
+        <div style={{ marginTop: "10px" }}>
+          {isEditing ? (
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="자기소개를 입력해 주세요"
+              maxLength={200}
+              rows={3}
+              style={{
+                width: "100%",
+                borderRadius: "var(--r-md)",
+                border: "1.5px solid var(--border)",
+                background: "var(--surface-2)",
+                padding: "10px 12px",
+                fontSize: "14px",
+                color: "var(--text-primary)",
+                fontFamily: "inherit",
+                outline: "none",
+                resize: "none",
+                boxSizing: "border-box",
+              }}
+            />
+          ) : bio ? (
+            <p style={{ fontSize: "14px", color: "var(--text-secondary)", lineHeight: "1.6", margin: 0 }}>{bio}</p>
+          ) : null}
+        </div>
+
+        {/* 이메일 */}
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "8px" }}>
+          <Mail size={13} style={{ color: "var(--text-muted)" }} />
+          <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>{userEmail}</span>
+        </div>
+
+        {/* 통계 */}
+        <div
+          style={{
+            display: "flex",
+            gap: "0",
+            marginTop: "20px",
+            paddingTop: "20px",
+            borderTop: "1.5px solid var(--border)",
+          }}
+        >
+          {[
+            { value: postCount, label: "게시물" },
+            { value: followerCount, label: "팔로워" },
+            { value: followingCount, label: "팔로잉" },
+            { value: petCount, label: "반려동물" },
+          ].map(({ value, label }) => (
+            <div key={label} style={{ flex: 1, textAlign: "center" }}>
+              <p style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)", margin: "0 0 2px" }}>{value}</p>
+              <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: 0 }}>{label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* 에러 */}
+        {error && (
+          <div
+            style={{
+              marginTop: "14px",
+              borderRadius: "var(--r-md)",
+              background: "var(--danger-bg)",
+              padding: "10px 14px",
+              fontSize: "13px",
+              color: "var(--danger)",
+            }}
           >
-            <Pencil size={12} />
-            수정
-          </button>
+            {error}
+          </div>
+        )}
+
+        {/* 편집 버튼 */}
+        {isEditing && (
+          <div style={{ marginTop: "16px", display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={isPending}
+              style={{
+                borderRadius: "var(--r-pill)",
+                border: "1.5px solid var(--border)",
+                background: "var(--surface)",
+                padding: "9px 18px",
+                fontSize: "14px",
+                fontWeight: 600,
+                color: "var(--text-primary)",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                opacity: isPending ? 0.5 : 1,
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <X size={14} /> 취소
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isPending}
+              style={{
+                borderRadius: "var(--r-pill)",
+                background: "var(--accent)",
+                border: "none",
+                padding: "9px 20px",
+                fontSize: "14px",
+                fontWeight: 600,
+                color: "white",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                opacity: isPending ? 0.5 : 1,
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <Check size={14} /> {isPending ? "저장 중..." : "저장"}
+            </button>
+          </div>
+        )}
+
+        {/* 로그아웃 — 모바일용, 편집 중엔 숨김, md 이상에선 사이드바에서 처리 */}
+        {!isEditing && (
+          <div className="md:hidden" style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1.5px solid var(--border)" }}>
+            <button
+              type="button"
+              onClick={handleLogout}
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                borderRadius: "var(--r-pill)",
+                border: "1.5px solid var(--border)",
+                background: "var(--surface)",
+                padding: "10px",
+                fontSize: "14px",
+                fontWeight: 600,
+                color: "var(--text-secondary)",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                transition: "transform 0.12s ease",
+              }}
+              onMouseDown={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(0.97)"; }}
+              onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+            >
+              <LogOut size={16} />
+              로그아웃
+            </button>
+          </div>
         )}
       </div>
-
-      {/* 자기소개 */}
-      <div className="mt-4">
-        {isEditing ? (
-          <textarea
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            placeholder="자기소개를 입력해 주세요"
-            maxLength={200}
-            rows={3}
-            className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700 focus:border-amber-400 focus:bg-white focus:outline-none resize-none"
-          />
-        ) : bio ? (
-          <p className="text-sm text-stone-700 leading-relaxed">{bio}</p>
-        ) : null}
-      </div>
-
-      {/* 이메일 */}
-      <div className="mt-3 flex items-center gap-1.5 text-sm text-stone-400">
-        <Mail size={14} />
-        <span>{userEmail}</span>
-      </div>
-
-      {/* 통계 */}
-      <div className="mt-4 flex gap-6 border-t border-stone-100 pt-4">
-        <div className="text-center">
-          <p className="text-lg font-bold text-stone-900">{postCount}</p>
-          <p className="text-xs text-stone-400">게시물</p>
-        </div>
-        <div className="text-center">
-          <p className="text-lg font-bold text-stone-900">{followerCount}</p>
-          <p className="text-xs text-stone-400">팔로워</p>
-        </div>
-        <div className="text-center">
-          <p className="text-lg font-bold text-stone-900">{followingCount}</p>
-          <p className="text-xs text-stone-400">팔로잉</p>
-        </div>
-        <div className="text-center">
-          <p className="text-lg font-bold text-stone-900">{petCount}</p>
-          <p className="text-xs text-stone-400">반려동물</p>
-        </div>
-      </div>
-
-      {error && (
-        <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>
-      )}
-
-      {isEditing && (
-        <div className="mt-4 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={isPending}
-            className="flex items-center gap-1.5 rounded-xl border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-600 hover:bg-stone-50 transition-colors disabled:opacity-50"
-          >
-            <X size={14} />
-            취소
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isPending}
-            className="flex items-center gap-1.5 rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600 transition-colors disabled:opacity-50"
-          >
-            <Check size={14} />
-            {isPending ? "저장 중..." : "저장"}
-          </button>
-        </div>
-      )}
     </div>
   );
 }

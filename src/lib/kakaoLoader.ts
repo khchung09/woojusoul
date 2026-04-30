@@ -17,8 +17,15 @@ export function loadKakaoMaps(): Promise<void> {
 
   loadPromise = new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${apiKey}&libraries=services`;
-    script.onload = () => resolve();
+    // autoload=false: 스크립트 실행 후 kakao.maps.load() 콜백에서만 생성자가 준비됨
+    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${apiKey}&libraries=services&autoload=false`;
+    script.onload = () => {
+      try {
+        window.kakao.maps.load(() => resolve());
+      } catch (e) {
+        reject(e);
+      }
+    };
     script.onerror = () => reject(new Error("Kakao Maps SDK 로드 실패"));
     document.head.appendChild(script);
   });

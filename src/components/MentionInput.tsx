@@ -28,6 +28,7 @@ type Props = {
   disabled?: boolean;
   wrapperClassName?: string;
   className?: string;
+  style?: React.CSSProperties;
   autoFocus?: boolean;
 };
 
@@ -41,6 +42,7 @@ export function MentionInput({
   disabled,
   wrapperClassName = "",
   className = "",
+  style,
   autoFocus,
 }: Props) {
   const [ctx, setCtx] = useState<{ query: string; start: number } | null>(null);
@@ -63,14 +65,10 @@ export function MentionInput({
       .then(({ data }) => {
         if (!cancelled) setSuggestions((data ?? []) as UserSuggestion[]);
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [ctx?.query]);
 
-  useEffect(() => {
-    setSelIdx(0);
-  }, [suggestions]);
+  useEffect(() => { setSelIdx(0); }, [suggestions]);
 
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     const newVal = e.target.value;
@@ -105,26 +103,10 @@ export function MentionInput({
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (suggestions.length > 0) {
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setSelIdx((i) => Math.min(i + 1, suggestions.length - 1));
-        return;
-      }
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setSelIdx((i) => Math.max(i - 1, 0));
-        return;
-      }
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        insertMention(suggestions[selIdx]);
-        return;
-      }
-      if (e.key === "Escape") {
-        setCtx(null);
-        setSuggestions([]);
-        return;
-      }
+      if (e.key === "ArrowDown") { e.preventDefault(); setSelIdx((i) => Math.min(i + 1, suggestions.length - 1)); return; }
+      if (e.key === "ArrowUp") { e.preventDefault(); setSelIdx((i) => Math.max(i - 1, 0)); return; }
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); insertMention(suggestions[selIdx]); return; }
+      if (e.key === "Escape") { setCtx(null); setSuggestions([]); return; }
     }
     onKeyDown?.(e);
   }
@@ -132,38 +114,66 @@ export function MentionInput({
   const showDropdown = ctx !== null && suggestions.length > 0;
 
   return (
-    <div className={`relative ${wrapperClassName}`}>
+    <div className={wrapperClassName} style={{ position: "relative" }}>
       {showDropdown && (
-        <div className="absolute bottom-full left-0 right-0 mb-1 z-50 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
-          <div className="max-h-48 overflow-y-auto">
+        <div
+          style={{
+            position: "absolute",
+            bottom: "100%",
+            left: 0,
+            right: 0,
+            marginBottom: "4px",
+            zIndex: 50,
+            borderRadius: "var(--r-md)",
+            border: "1.5px solid var(--border)",
+            background: "var(--surface)",
+            boxShadow: "var(--shadow-md)",
+            overflow: "hidden",
+          }}
+        >
+          <div style={{ maxHeight: "192px", overflowY: "auto" }}>
             {suggestions.map((user, i) => (
               <button
                 key={user.id}
                 type="button"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  insertMention(user);
+                onMouseDown={(e) => { e.preventDefault(); insertMention(user); }}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  padding: "10px 14px",
+                  fontSize: "14px",
+                  background: i === selIdx ? "var(--accent-bg)" : "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  textAlign: "left",
                 }}
-                className={`flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
-                  i === selIdx ? "bg-amber-50" : "hover:bg-stone-50"
-                }`}
               >
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-xs font-bold text-white">
+                <div
+                  style={{
+                    width: "28px",
+                    height: "28px",
+                    borderRadius: "100px",
+                    background: "var(--accent-bg)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden",
+                    flexShrink: 0,
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    color: "var(--accent)",
+                  }}
+                >
                   {user.avatar_url ? (
-                    <img
-                      src={user.avatar_url}
-                      alt={user.username}
-                      className="h-full w-full object-cover"
-                    />
+                    <img src={user.avatar_url} alt={user.username} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   ) : (
                     user.username[0].toUpperCase()
                   )}
                 </div>
-                <span
-                  className={`font-medium ${
-                    i === selIdx ? "text-amber-700" : "text-stone-700"
-                  }`}
-                >
+                <span style={{ fontWeight: 600, color: i === selIdx ? "var(--accent)" : "var(--text-primary)" }}>
                   @{user.username}
                 </span>
               </button>
@@ -183,6 +193,7 @@ export function MentionInput({
         disabled={disabled}
         autoFocus={autoFocus}
         className={className}
+        style={style}
       />
     </div>
   );

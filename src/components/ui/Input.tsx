@@ -1,5 +1,4 @@
-import { cn } from "@/lib/utils";
-import { InputHTMLAttributes, forwardRef } from "react";
+import { InputHTMLAttributes, forwardRef, useState } from "react";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -7,27 +6,59 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, id, ...props }, ref) => {
+  ({ label, error, id, style, ...props }, ref) => {
+    const [focused, setFocused] = useState(false);
+
     return (
-      <div className="flex flex-col gap-1">
+      <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
         {label && (
-          <label htmlFor={id} className="text-sm font-medium text-stone-700">
+          <label
+            htmlFor={id}
+            style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)" }}
+          >
             {label}
           </label>
         )}
         <input
           ref={ref}
           id={id}
-          className={cn(
-            "rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400",
-            "focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent",
-            "disabled:opacity-50 disabled:cursor-not-allowed",
-            error && "border-red-400 focus:ring-red-400",
-            className
-          )}
+          style={{
+            borderRadius: "var(--r-md)",
+            border: error
+              ? "1.5px solid var(--danger)"
+              : focused
+              ? "1.5px solid var(--accent)"
+              : "1.5px solid var(--border)",
+            background: "var(--surface)",
+            padding: "11px 14px",
+            fontSize: "14px",
+            color: "var(--text-primary)",
+            fontFamily: "inherit",
+            outline: "none",
+            width: "100%",
+            boxSizing: "border-box",
+            transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+            boxShadow: focused
+              ? error
+                ? "0 0 0 3px rgba(192,57,43,0.1)"
+                : "0 0 0 3px rgba(45,80,22,0.08)"
+              : "none",
+            ...style,
+          }}
+          onFocus={(e) => {
+            setFocused(true);
+            props.onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            props.onBlur?.(e);
+          }}
+          placeholder={props.placeholder}
           {...props}
         />
-        {error && <p className="text-xs text-red-500">{error}</p>}
+        {error && (
+          <p style={{ fontSize: "12px", color: "var(--danger)", margin: 0 }}>{error}</p>
+        )}
       </div>
     );
   }

@@ -17,6 +17,9 @@ export interface Database {
           bio: string | null;
           is_verified: boolean;
           is_blinded: boolean;
+          role: string | null;
+          real_name: string | null;
+          phone: string | null;
           username_updated_at: string | null;
           created_at: string;
           updated_at: string;
@@ -27,6 +30,9 @@ export interface Database {
           avatar_url?: string | null;
           bio?: string | null;
           is_verified?: boolean;
+          role?: string | null;
+          real_name?: string | null;
+          phone?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -37,6 +43,9 @@ export interface Database {
           bio?: string | null;
           is_verified?: boolean;
           is_blinded?: boolean;
+          role?: string | null;
+          real_name?: string | null;
+          phone?: string | null;
           username_updated_at?: string | null;
           updated_at?: string;
         };
@@ -227,7 +236,7 @@ export interface Database {
           recipient_id: string;
           actor_id: string;
           post_id: string | null;
-          type: "like" | "comment" | "application" | "follow" | "mention";
+          type: "like" | "comment" | "application" | "follow" | "mention" | "location_request" | "location_approved" | "location_rejected" | "verification_approved" | "verification_request";
           is_read: boolean;
           created_at: string;
         };
@@ -236,12 +245,34 @@ export interface Database {
           recipient_id: string;
           actor_id: string;
           post_id?: string | null;
-          type: "like" | "comment" | "application" | "follow" | "mention";
+          type: "like" | "comment" | "application" | "follow" | "mention" | "location_request" | "location_approved" | "location_rejected" | "verification_approved" | "verification_request";
           is_read?: boolean;
           created_at?: string;
         };
         Update: {
           is_read?: boolean;
+        };
+        Relationships: [];
+      };
+      location_requests: {
+        Row: {
+          id: string;
+          post_id: string;
+          requester_id: string;
+          owner_id: string;
+          status: "pending" | "approved" | "rejected";
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          requester_id: string;
+          owner_id: string;
+          status?: "pending" | "approved" | "rejected";
+          created_at?: string;
+        };
+        Update: {
+          status?: "pending" | "approved" | "rejected";
         };
         Relationships: [];
       };

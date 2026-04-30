@@ -5,9 +5,12 @@ import Link from "next/link";
 import { Bell } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils";
 
-export function NotificationBell() {
+interface Props {
+  desktop?: boolean;
+}
+
+export function NotificationBell({ desktop = false }: Props) {
   const [count, setCount] = useState(0);
   const pathname = usePathname();
 
@@ -35,9 +38,6 @@ export function NotificationBell() {
       await fetchCount(user.id);
       if (cancelled) return;
 
-      // Math.random()으로 채널 이름을 유일하게 만들어
-      // 이전 채널이 완전히 정리되기 전 같은 이름으로 재구독할 때
-      // 발생하는 "cannot add postgres_changes callbacks after subscribe()" 방지
       channelRef = supabase
         .channel(`notif-bell:${user.id}:${Math.random()}`)
         .on(
@@ -64,24 +64,102 @@ export function NotificationBell() {
     if (pathname === "/notifications") setCount(0);
   }, [pathname]);
 
+  const active = pathname.startsWith("/notifications");
+
+  if (desktop) {
+    return (
+      <Link
+        href="/notifications"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          padding: "10px 16px",
+          borderRadius: "var(--r-md)",
+          background: active ? "var(--accent-bg)" : "transparent",
+          color: active ? "var(--accent)" : "var(--text-secondary)",
+          fontWeight: active ? 700 : 500,
+          fontSize: "14px",
+          textDecoration: "none",
+          transition: "all 0.15s ease",
+          position: "relative",
+        }}
+      >
+        <span style={{ position: "relative" }}>
+          <Bell size={20} />
+          {count > 0 && (
+            <span
+              style={{
+                position: "absolute",
+                top: "-6px",
+                right: "-6px",
+                minWidth: "16px",
+                height: "16px",
+                borderRadius: "100px",
+                background: "var(--danger)",
+                color: "white",
+                fontSize: "9px",
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "0 3px",
+                lineHeight: 1,
+              }}
+            >
+              {count > 9 ? "9+" : count}
+            </span>
+          )}
+        </span>
+        알림
+      </Link>
+    );
+  }
+
   return (
     <Link
       href="/notifications"
-      className={cn(
-        "relative flex flex-col items-center gap-0.5 rounded-xl px-2.5 py-2 text-xs font-medium transition-colors md:flex-row md:gap-2 md:w-full md:px-4 md:text-sm",
-        pathname.startsWith("/notifications")
-          ? "text-amber-600 bg-amber-50"
-          : "text-stone-500 hover:text-amber-600 hover:bg-amber-50"
-      )}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "3px",
+        padding: "6px 16px",
+        textDecoration: "none",
+        color: active ? "var(--accent)" : "var(--text-muted)",
+        fontWeight: active ? 700 : 500,
+        fontSize: "11px",
+        transform: active ? "scale(1.05)" : "scale(1)",
+        transition: "all 0.15s ease",
+        position: "relative",
+      }}
     >
-      <div className="relative">
-        <Bell size={20} />
+      <span style={{ position: "relative" }}>
+        <Bell size={22} />
         {count > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold text-white leading-none">
+          <span
+            style={{
+              position: "absolute",
+              top: "-5px",
+              right: "-6px",
+              minWidth: "16px",
+              height: "16px",
+              borderRadius: "100px",
+              background: "var(--danger)",
+              color: "white",
+              fontSize: "9px",
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "0 3px",
+              lineHeight: 1,
+            }}
+          >
             {count > 9 ? "9+" : count}
           </span>
         )}
-      </div>
+      </span>
       <span>알림</span>
     </Link>
   );

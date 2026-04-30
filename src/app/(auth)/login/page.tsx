@@ -30,16 +30,13 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-
     if (error) {
       setError("이메일 또는 비밀번호를 확인해 주세요.");
       setLoading(false);
       return;
     }
-
     window.location.href = "/feed";
   }
 
@@ -48,73 +45,152 @@ export default function LoginPage() {
     const supabase = createClient();
     await supabase.auth.signInWithOAuth({
       provider: "kakao",
-      options: {
-        redirectTo: `${window.location.origin}/api/auth/callback`,
-      },
+      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
     });
   }
 
   return (
     <>
-    <OnboardingOverlay />
-    <div className="flex min-h-screen flex-col items-center justify-center bg-amber-50 px-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-sm">
-        <div className="mb-8 flex flex-col items-center gap-2">
-          <Image src="/woojusoulicon.png" alt="우주소울" width={88} height={88} style={{ mixBlendMode: "multiply" }} />
-          <h1 className="text-lg font-bold text-stone-900">우주소울에 오신 것을 환영해요</h1>
-          <p className="text-sm text-stone-500">유기동물과 사람을 잇는 따뜻한 공간</p>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleKakaoLogin}
-          disabled={kakaoLoading}
-          className="flex w-full items-center justify-center gap-2 rounded-xl py-3 font-semibold text-sm transition-opacity disabled:opacity-60"
-          style={{ backgroundColor: "#FEE500", color: "rgba(0,0,0,0.85)" }}
+      <OnboardingOverlay />
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "var(--bg)",
+          padding: "16px",
+        }}
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "400px",
+            borderRadius: "var(--r-lg)",
+            background: "var(--surface)",
+            padding: "40px 32px",
+            boxShadow: "var(--shadow-md)",
+            border: "1.5px solid var(--border)",
+          }}
         >
-          <KakaoIcon />
-          {kakaoLoading ? "연결 중..." : "카카오 로그인"}
-        </button>
+          {/* 로고 */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "10px",
+              marginBottom: "32px",
+            }}
+          >
+            <Image
+              src="/woojusoulicon.png"
+              alt="우주소울"
+              width={80}
+              height={80}
+              style={{ mixBlendMode: "multiply" }}
+            />
+            <h1 style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+              우주소울에 오신 것을 환영해요
+            </h1>
+            <p style={{ fontSize: "14px", color: "var(--text-muted)", margin: 0 }}>
+              유기동물과 사람을 잇는 따뜻한 공간
+            </p>
+          </div>
 
-        <div className="my-5 flex items-center gap-3">
-          <div className="h-px flex-1 bg-stone-200" />
-          <span className="text-xs text-stone-400">또는</span>
-          <div className="h-px flex-1 bg-stone-200" />
+          {/* 카카오 버튼 */}
+          <button
+            type="button"
+            onClick={handleKakaoLogin}
+            disabled={kakaoLoading}
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              borderRadius: "var(--r-pill)",
+              padding: "13px 24px",
+              fontWeight: 700,
+              fontSize: "15px",
+              fontFamily: "inherit",
+              backgroundColor: "#FEE500",
+              color: "rgba(0,0,0,0.85)",
+              border: "none",
+              cursor: "pointer",
+              opacity: kakaoLoading ? 0.6 : 1,
+              transition: "transform 0.12s ease, opacity 0.12s ease",
+            }}
+            onMouseDown={(e) => { if (!kakaoLoading) (e.currentTarget as HTMLElement).style.transform = "scale(0.96)"; }}
+            onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+          >
+            <KakaoIcon />
+            {kakaoLoading ? "연결 중..." : "카카오 로그인"}
+          </button>
+
+          {/* 구분선 */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              margin: "20px 0",
+            }}
+          >
+            <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
+            <span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 500 }}>또는</span>
+            <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
+          </div>
+
+          {/* 이메일 로그인 폼 */}
+          <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <Input
+              id="email"
+              type="email"
+              label="이메일"
+              placeholder="hello@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <Input
+              id="password"
+              type="password"
+              label="비밀번호"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            {error && (
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "var(--danger)",
+                  background: "var(--danger-bg)",
+                  padding: "10px 14px",
+                  borderRadius: "var(--r-md)",
+                  margin: 0,
+                }}
+              >
+                {error}
+              </p>
+            )}
+            <Button type="submit" size="lg" loading={loading} style={{ width: "100%", marginTop: "4px" }}>
+              로그인
+            </Button>
+          </form>
+
+          <p style={{ marginTop: "24px", textAlign: "center", fontSize: "14px", color: "var(--text-muted)" }}>
+            계정이 없으신가요?{" "}
+            <Link href="/signup" style={{ fontWeight: 700, color: "var(--accent)", textDecoration: "none" }}>
+              회원가입
+            </Link>
+          </p>
         </div>
-
-        <form onSubmit={handleLogin} className="flex flex-col gap-4">
-          <Input
-            id="email"
-            type="email"
-            label="이메일"
-            placeholder="hello@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <Input
-            id="password"
-            type="password"
-            label="비밀번호"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          {error && <p className="text-sm text-red-500">{error}</p>}
-          <Button type="submit" size="lg" loading={loading} className="w-full mt-2">
-            로그인
-          </Button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-stone-500">
-          계정이 없으신가요?{" "}
-          <Link href="/signup" className="font-semibold text-amber-600 hover:underline">
-            회원가입
-          </Link>
-        </p>
       </div>
-    </div>
     </>
   );
 }

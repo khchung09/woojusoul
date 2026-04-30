@@ -1,29 +1,62 @@
 import { Navbar } from "@/components/Navbar";
 import Image from "next/image";
+import { createClient } from "@/lib/supabase/server";
 
-export default function MainLayout({ children }: { children: React.ReactNode }) {
+export default async function MainLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("role").eq("id", user.id).single()
+    : { data: null };
+  const isAdmin = profile?.role === "admin";
+
   return (
-    <div className="flex min-h-screen flex-col bg-stone-50 md:flex-row">
-      <aside className="hidden md:flex md:w-56 md:flex-col md:border-r md:border-stone-100 md:bg-white md:px-4 md:py-6">
-        <div className="mb-8 flex items-center gap-2 px-2">
+    <div
+      style={{ minHeight: "100vh", background: "var(--bg)" }}
+      className="flex flex-col md:flex-row"
+    >
+      {/* 데스크탑 사이드바 */}
+      <aside
+        className="hidden md:flex md:flex-col"
+        style={{
+          width: "220px",
+          flexShrink: 0,
+          borderRight: "1px solid var(--border)",
+          background: "var(--surface)",
+          padding: "24px 16px",
+          position: "sticky",
+          top: 0,
+          height: "100vh",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "0 8px", marginBottom: "28px" }}>
           <Image
-              src="/woojusoulicon.png"
-              alt="우주소울"
-              width={44}
-              height={44}
-              style={{ mixBlendMode: "multiply" }}
-            />
-          <span className="text-xl font-bold text-amber-600 whitespace-nowrap">우주소울</span>
+            src="/woojusoulicon.png"
+            alt="우주소울"
+            width={40}
+            height={40}
+            style={{ mixBlendMode: "multiply" }}
+          />
+          <span style={{ fontSize: "18px", fontWeight: 800, color: "var(--accent)", whiteSpace: "nowrap" }}>
+            우주소울
+          </span>
         </div>
-        <Navbar />
+        <Navbar isAdmin={isAdmin} />
       </aside>
 
-      <main className="flex-1 pb-20 md:pb-0">
-        <div className="mx-auto max-w-screen-sm px-4 py-6">{children}</div>
+      {/* 메인 콘텐츠 */}
+      <main style={{ flex: 1 }} className="pb-20 md:pb-0">
+        <div
+          style={{ maxWidth: "640px", margin: "0 auto", paddingLeft: "16px", paddingRight: "16px", paddingBottom: "24px" }}
+          className="pt-[52px] md:pt-4"
+        >
+          {children}
+        </div>
       </main>
 
+      {/* 모바일 하단 네비게이션 */}
       <div className="md:hidden">
-        <Navbar />
+        <Navbar isAdmin={isAdmin} />
       </div>
     </div>
   );

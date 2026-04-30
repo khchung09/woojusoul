@@ -27,11 +27,27 @@ export default async function NotificationsPage() {
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+    <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
+      {/* 헤더 */}
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+          background: "rgba(247,246,243,0.92)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          marginBottom: "20px",
+        }}
+      >
         <div>
-          <h1 className="text-xl font-bold text-stone-900">알림</h1>
-          <p className="text-xs text-stone-400 mt-0.5">
+          <h1 style={{ fontSize: "22px", fontWeight: 800, color: "var(--text-primary)", margin: "0 0 2px" }}>
+            알림
+          </h1>
+          <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0 }}>
             {unreadCount > 0 ? `읽지 않은 알림 ${unreadCount}개` : "모든 알림을 읽었어요"}
           </p>
         </div>

@@ -13,34 +13,23 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { formatDistanceToNow } from "@/lib/dateUtils";
-import { deletePost, toggleLike } from "@/lib/actions";
+import { deletePost, toggleLike, requestLocationAccess } from "@/lib/actions";
 import type { PostWithAuthor } from "@/types/models";
 import ReportModal from "@/components/ReportModal";
 import ApplicationModal from "@/components/ApplicationModal";
 import { MentionText } from "@/components/MentionText";
+import { MiniMap } from "@/components/MiniMap";
 
 type PostType = "general" | "report" | "temp_protect" | "adoption";
 
-const TYPE_BADGE: Record<
+const TYPE_CONFIG: Record<
   PostType,
-  { label: string; emoji: string; className: string } | null
+  { label: string; emoji: string; color: string; bg: string } | null
 > = {
   general: null,
-  report: {
-    label: "제보",
-    emoji: "🚨",
-    className: "bg-red-100 text-red-600 border border-red-200",
-  },
-  temp_protect: {
-    label: "임시보호구함",
-    emoji: "🏠",
-    className: "bg-amber-100 text-amber-700 border border-amber-200",
-  },
-  adoption: {
-    label: "입양보냄",
-    emoji: "💛",
-    className: "bg-green-100 text-green-700 border border-green-200",
-  },
+  report: { label: "제보", emoji: "🚨", color: "var(--danger)", bg: "var(--danger-bg)" },
+  temp_protect: { label: "임시보호", emoji: "🏠", color: "var(--warning)", bg: "var(--warning-bg)" },
+  adoption: { label: "입양보냄", emoji: "💛", color: "var(--gold)", bg: "var(--gold-bg)" },
 };
 
 const ANIMAL_TYPE_LABEL: Record<string, string> = {
@@ -49,10 +38,10 @@ const ANIMAL_TYPE_LABEL: Record<string, string> = {
   other: "🐾 기타",
 };
 
-const ANIMAL_STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  rescue_needed: { label: "구조필요", className: "bg-red-500 text-white" },
-  protected: { label: "보호중", className: "bg-amber-500 text-white" },
-  rescued: { label: "구조완료", className: "bg-green-500 text-white" },
+const ANIMAL_STATUS_BADGE: Record<string, { label: string; color: string; bg: string }> = {
+  rescue_needed: { label: "구조필요", color: "white", bg: "var(--danger)" },
+  protected: { label: "보호중", color: "white", bg: "var(--warning)" },
+  rescued: { label: "구조완료", color: "white", bg: "var(--accent-light)" },
 };
 
 const SPECIES_LABEL: Record<string, string> = {
@@ -70,10 +59,10 @@ const HEALTH_LABEL: Record<string, string> = {
   treatment: "치료중",
   warning: "요주의",
 };
-const HEALTH_COLOR: Record<string, string> = {
-  good: "bg-green-100 text-green-700",
-  treatment: "bg-amber-100 text-amber-700",
-  warning: "bg-red-100 text-red-700",
+const HEALTH_COLOR: Record<string, { color: string; bg: string }> = {
+  good: { color: "var(--accent)", bg: "var(--accent-bg)" },
+  treatment: { color: "var(--warning)", bg: "var(--warning-bg)" },
+  warning: { color: "var(--danger)", bg: "var(--danger-bg)" },
 };
 const NEUTERED_LABEL: Record<string, string> = {
   yes: "중성화 완료",
@@ -84,11 +73,7 @@ const NEUTERED_LABEL: Record<string, string> = {
 function parseImageUrls(imageUrl: string | null): string[] {
   if (!imageUrl) return [];
   if (imageUrl.startsWith("[")) {
-    try {
-      return JSON.parse(imageUrl) as string[];
-    } catch {
-      return [imageUrl];
-    }
+    try { return JSON.parse(imageUrl) as string[]; } catch { return [imageUrl]; }
   }
   return [imageUrl];
 }
@@ -99,24 +84,36 @@ function AuthorAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string | 
       <img
         src={avatarUrl}
         alt={name}
-        className="h-9 w-9 shrink-0 rounded-full object-cover shadow-sm"
+        style={{
+          width: "40px",
+          height: "40px",
+          borderRadius: "100px",
+          objectFit: "cover",
+          flexShrink: 0,
+        }}
       />
     );
   }
   return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white font-bold text-sm shadow-sm">
-      {name[0]}
+    <div
+      style={{
+        width: "40px",
+        height: "40px",
+        borderRadius: "100px",
+        background: "var(--accent-bg)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "18px",
+        flexShrink: 0,
+      }}
+    >
+      🐾
     </div>
   );
 }
 
-function AnimalInfoBlock({
-  content,
-  type,
-}: {
-  content: string;
-  type: "temp_protect" | "adoption";
-}) {
+function AnimalInfoBlock({ content, type }: { content: string; type: "temp_protect" | "adoption" }) {
   let data: Record<string, string> | null = null;
   try {
     const parsed = JSON.parse(content);
@@ -127,7 +124,7 @@ function AnimalInfoBlock({
 
   if (!data) {
     return (
-      <p className="text-sm text-stone-700 leading-relaxed whitespace-pre-wrap">
+      <p style={{ fontSize: "14px", color: "var(--text-secondary)", lineHeight: "1.6", whiteSpace: "pre-wrap" }}>
         {content}
       </p>
     );
@@ -138,70 +135,92 @@ function AnimalInfoBlock({
     data.name ? `이름: ${data.name}` : null,
     data.age || null,
     GENDER_LABEL[data.gender] ?? data.gender,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  ].filter(Boolean).join(" · ");
+
+  const healthStyle = data.health ? HEALTH_COLOR[data.health] : null;
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="rounded-xl bg-stone-50 border border-stone-100 p-3 space-y-1.5">
-        <p className="text-sm font-semibold text-stone-800">{infoLine}</p>
+    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+      <div
+        style={{
+          borderRadius: "var(--r-md)",
+          background: "var(--surface-2)",
+          padding: "12px 14px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "6px",
+        }}
+      >
+        <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>{infoLine}</p>
 
         {type === "adoption" && data.neutered && (
-          <p className="text-xs text-stone-500">
+          <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0 }}>
             {NEUTERED_LABEL[data.neutered] ?? data.neutered}
           </p>
         )}
 
-        {data.health && (
+        {data.health && healthStyle && (
           <span
-            className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-              HEALTH_COLOR[data.health] ?? "bg-stone-100 text-stone-600"
-            }`}
+            style={{
+              display: "inline-block",
+              borderRadius: "var(--r-pill)",
+              padding: "2px 10px",
+              fontSize: "12px",
+              fontWeight: 500,
+              color: healthStyle.color,
+              background: healthStyle.bg,
+              alignSelf: "flex-start",
+            }}
           >
             건강: {HEALTH_LABEL[data.health] ?? data.health}
           </span>
         )}
 
         {data.personality && (
-          <p className="text-xs text-stone-600">성격: {data.personality}</p>
+          <p style={{ fontSize: "12px", color: "var(--text-secondary)", margin: 0 }}>성격: {data.personality}</p>
         )}
 
         {type === "temp_protect" && data.period && (
-          <p className="text-xs text-stone-600">
+          <p style={{ fontSize: "12px", color: "var(--text-secondary)", margin: 0 }}>
             임시보호 가능 기간: {data.period}
           </p>
         )}
 
         {type === "adoption" && data.conditions && (
-          <p className="text-xs text-stone-600">입양 조건: {data.conditions}</p>
+          <p style={{ fontSize: "12px", color: "var(--text-secondary)", margin: 0 }}>입양 조건: {data.conditions}</p>
         )}
       </div>
 
       {data.description && (
         <MentionText
           text={data.description}
-          className="text-sm text-stone-700 leading-relaxed whitespace-pre-wrap"
+          style={{ fontSize: "14px", color: "var(--text-secondary)", lineHeight: "1.6", whiteSpace: "pre-wrap" }}
         />
       )}
     </div>
   );
 }
 
+type LocationRequestStatus = "pending" | "approved" | "rejected";
+
 type Props = {
   post: PostWithAuthor;
   isVerified?: boolean;
+  isAdmin?: boolean;
   currentUserId?: string | null;
   initialLiked?: boolean;
   disableLink?: boolean;
+  initialLocationRequest?: LocationRequestStatus | null;
 };
 
 export default function PostCard({
   post,
   isVerified = false,
+  isAdmin = false,
   currentUserId,
   initialLiked = false,
   disableLink = false,
+  initialLocationRequest = null,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -211,37 +230,30 @@ export default function PostCard({
   const [liked, setLiked] = useState(initialLiked);
   const [likesCount, setLikesCount] = useState(post.likes_count);
   const [liking, startLikeTransition] = useTransition();
+  const [locStatus, setLocStatus] = useState<LocationRequestStatus | null>(initialLocationRequest);
+  const [locRequesting, startLocTransition] = useTransition();
+  const [toast, setToast] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
-  // skipNavRef prevents navigation when user closes the dropdown menu by clicking elsewhere
   const skipNavRef = useRef(false);
   const router = useRouter();
 
   const postType = (post.post_type ?? "general") as PostType;
-  const badge = TYPE_BADGE[postType];
+  const badge = TYPE_CONFIG[postType];
   const authorName = post.profiles?.username ?? "알 수 없음";
-  const statusBadge = post.animal_status
-    ? ANIMAL_STATUS_BADGE[post.animal_status]
-    : null;
+  const statusBadge = post.animal_status ? ANIMAL_STATUS_BADGE[post.animal_status] : null;
   const displayLocation =
     postType === "report"
-      ? isVerified && post.location_address
-        ? post.location_address
-        : post.location
+      ? isVerified && post.location_address ? post.location_address : post.location
       : post.location;
-
   const imageUrls = parseImageUrls(post.image_url);
   const isOwn = !!currentUserId && currentUserId === post.author_id;
-
-  const isBlindedPost = (post.report_count ?? 0) >= 5 && !isOwn;
-  const isBlindedUser = (post.profiles?.is_blinded === true) && !isOwn;
-  const isBlinded = isBlindedPost || isBlindedUser;
+  const isBlinded = ((post.report_count ?? 0) >= 5 || post.profiles?.is_blinded === true) && !isOwn;
 
   useEffect(() => {
     if (!menuOpen) return;
     function handler(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false);
-        // prevent the card click from navigating immediately after menu closes
         skipNavRef.current = true;
       }
     }
@@ -251,10 +263,7 @@ export default function PostCard({
 
   function handleCardClick() {
     if (disableLink) return;
-    if (skipNavRef.current) {
-      skipNavRef.current = false;
-      return;
-    }
+    if (skipNavRef.current) { skipNavRef.current = false; return; }
     router.push(`/posts/${post.id}`);
   }
 
@@ -279,26 +288,48 @@ export default function PostCard({
 
   function handleLike(e: React.MouseEvent) {
     e.stopPropagation();
-    if (!currentUserId) {
-      router.push("/login");
-      return;
-    }
+    if (!currentUserId) { router.push("/login"); return; }
     const newLiked = !liked;
     setLiked(newLiked);
     setLikesCount((c) => (newLiked ? c + 1 : Math.max(0, c - 1)));
-    startLikeTransition(async () => {
-      await toggleLike(post.id);
+    startLikeTransition(async () => { await toggleLike(post.id); });
+  }
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(""), 3000);
+  }
+
+  function handleLocationRequest(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!currentUserId) { router.push("/login"); return; }
+    if (!isVerified) { showToast("위치 열람은 인증 유저만 신청할 수 있어요"); return; }
+    startLocTransition(async () => {
+      const result = await requestLocationAccess(post.id, post.author_id);
+      if (result.error) { showToast(result.error); return; }
+      setLocStatus("pending");
     });
   }
 
   if (isBlinded) {
     return (
-      <article className="rounded-2xl bg-white shadow-sm border border-stone-100 overflow-hidden">
-        <div className="p-5 flex items-center gap-3">
-          <ShieldAlert size={20} className="shrink-0 text-stone-300" />
+      <article
+        style={{
+          borderRadius: "var(--r-lg)",
+          background: "var(--surface)",
+          border: "1.5px solid var(--border)",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: "12px" }}>
+          <ShieldAlert size={20} style={{ flexShrink: 0, color: "var(--text-muted)" }} />
           <div>
-            <p className="text-sm font-medium text-stone-400">신고된 게시물입니다</p>
-            <p className="text-xs text-stone-300 mt-0.5">커뮤니티 가이드라인 위반으로 가려졌어요</p>
+            <p style={{ fontSize: "14px", fontWeight: 500, color: "var(--text-muted)", margin: "0 0 2px" }}>
+              신고된 게시물입니다
+            </p>
+            <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0, opacity: 0.7 }}>
+              커뮤니티 가이드라인 위반으로 가려졌어요
+            </p>
           </div>
         </div>
       </article>
@@ -309,25 +340,26 @@ export default function PostCard({
     <>
       <article
         onClick={handleCardClick}
-        className={`rounded-2xl bg-white shadow-sm border border-stone-100 overflow-hidden ${
-          !disableLink ? "cursor-pointer active:bg-stone-50 transition-colors" : ""
-        }`}
+        style={{
+          borderRadius: "var(--r-lg)",
+          background: "var(--surface)",
+          border: "1.5px solid var(--border)",
+          boxShadow: "var(--shadow-sm)",
+          overflow: "hidden",
+          cursor: disableLink ? "default" : "pointer",
+          transition: "box-shadow 0.15s ease, transform 0.12s ease",
+        }}
+        onMouseDown={(e) => {
+          if (!disableLink) (e.currentTarget as HTMLElement).style.transform = "scale(0.97)";
+        }}
+        onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
       >
-        {postType === "report" && (
-          <div className="h-1 bg-gradient-to-r from-red-400 to-rose-500" />
-        )}
-        {postType === "temp_protect" && (
-          <div className="h-1 bg-gradient-to-r from-amber-400 to-orange-400" />
-        )}
-        {postType === "adoption" && (
-          <div className="h-1 bg-gradient-to-r from-green-400 to-emerald-500" />
-        )}
-
-        <div className="p-5">
+        <div style={{ padding: "18px 20px" }}>
           {/* 헤더 */}
-          <div className="mb-3 flex items-start justify-between gap-2">
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px", marginBottom: "14px" }}>
             <div
-              className="flex items-center gap-2.5 cursor-pointer"
+              style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}
               onClick={(e) => {
                 e.stopPropagation();
                 router.push(isOwn ? "/profile" : `/profile/${post.author_id}`);
@@ -335,19 +367,29 @@ export default function PostCard({
             >
               <AuthorAvatar name={authorName} avatarUrl={post.profiles?.avatar_url} />
               <div>
-                <p className="text-sm font-semibold text-stone-900 hover:underline">
+                <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", margin: "0 0 1px" }}>
                   @{authorName}
                 </p>
-                <p className="text-xs text-stone-400">
+                <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0 }}>
                   {formatDistanceToNow(post.created_at)}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
               {badge && (
                 <span
-                  className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${badge.className}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    borderRadius: "var(--r-pill)",
+                    padding: "4px 10px",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: badge.color,
+                    background: badge.bg,
+                  }}
                 >
                   <span>{badge.emoji}</span>
                   {badge.label}
@@ -356,52 +398,107 @@ export default function PostCard({
 
               {(isOwn || !!currentUserId) && (
                 <div
-                  className="relative"
                   ref={menuRef}
+                  style={{ position: "relative" }}
                   onClick={(e) => e.stopPropagation()}
                 >
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setMenuOpen((v) => !v);
+                    onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
+                    style={{
+                      width: "30px",
+                      height: "30px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: "var(--r-sm)",
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--text-muted)",
                     }}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg text-stone-400 hover:bg-stone-100 transition-colors"
                     aria-label="게시물 옵션"
                   >
                     <MoreVertical size={15} />
                   </button>
 
                   {menuOpen && (
-                    <div className="absolute right-0 top-full z-10 mt-1 w-32 rounded-2xl bg-white py-1.5 shadow-lg border border-stone-100">
+                    <div
+                      style={{
+                        position: "absolute",
+                        right: 0,
+                        top: "100%",
+                        marginTop: "4px",
+                        zIndex: 10,
+                        width: "130px",
+                        borderRadius: "var(--r-md)",
+                        background: "var(--surface)",
+                        border: "1.5px solid var(--border)",
+                        boxShadow: "var(--shadow-md)",
+                        padding: "6px",
+                        overflow: "hidden",
+                      }}
+                    >
                       {isOwn ? (
                         <>
                           <button
                             onClick={handleEdit}
-                            className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+                            style={{
+                              width: "100%",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              padding: "8px 10px",
+                              fontSize: "13px",
+                              color: "var(--text-primary)",
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              borderRadius: "var(--r-sm)",
+                              textAlign: "left",
+                            }}
                           >
-                            <Pencil size={13} />
-                            수정하기
+                            <Pencil size={13} /> 수정하기
                           </button>
                           <button
                             onClick={handleDeleteConfirm}
-                            className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                            style={{
+                              width: "100%",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              padding: "8px 10px",
+                              fontSize: "13px",
+                              color: "var(--danger)",
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              borderRadius: "var(--r-sm)",
+                              textAlign: "left",
+                            }}
                           >
-                            <Trash2 size={13} />
-                            삭제하기
+                            <Trash2 size={13} /> 삭제하기
                           </button>
                         </>
                       ) : (
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setMenuOpen(false);
-                            setShowReportModal(true);
+                          onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setShowReportModal(true); }}
+                          style={{
+                            width: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            padding: "8px 10px",
+                            fontSize: "13px",
+                            color: "var(--danger)",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            borderRadius: "var(--r-sm)",
+                            textAlign: "left",
                           }}
-                          className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                         >
-                          <Flag size={13} />
-                          신고하기
+                          <Flag size={13} /> 신고하기
                         </button>
                       )}
                     </div>
@@ -411,30 +508,55 @@ export default function PostCard({
             </div>
           </div>
 
-          {/* 제보 메타 정보 */}
-          {postType === "report" &&
-            (post.animal_type || post.location || post.animal_status) && (
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                {statusBadge && (
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusBadge.className}`}
-                  >
-                    {statusBadge.label}
-                  </span>
-                )}
-                {post.animal_type && (
-                  <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs text-stone-600">
-                    {ANIMAL_TYPE_LABEL[post.animal_type] ?? post.animal_type}
-                  </span>
-                )}
-                {displayLocation && (
-                  <span className="flex items-center gap-1 rounded-full bg-stone-100 px-2.5 py-0.5 text-xs text-stone-500">
-                    <MapPin size={10} />
-                    {displayLocation}
-                  </span>
-                )}
-              </div>
-            )}
+          {/* 제보 메타 */}
+          {postType === "report" && (post.animal_type || post.location || post.animal_status) && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "12px" }}>
+              {statusBadge && (
+                <span
+                  style={{
+                    borderRadius: "var(--r-pill)",
+                    padding: "3px 10px",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: statusBadge.color,
+                    background: statusBadge.bg,
+                  }}
+                >
+                  {statusBadge.label}
+                </span>
+              )}
+              {post.animal_type && (
+                <span
+                  style={{
+                    borderRadius: "var(--r-pill)",
+                    padding: "3px 10px",
+                    fontSize: "12px",
+                    color: "var(--text-secondary)",
+                    background: "var(--surface-2)",
+                  }}
+                >
+                  {ANIMAL_TYPE_LABEL[post.animal_type] ?? post.animal_type}
+                </span>
+              )}
+              {displayLocation && (
+                <span
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    borderRadius: "var(--r-pill)",
+                    padding: "3px 10px",
+                    fontSize: "12px",
+                    color: "var(--text-muted)",
+                    background: "var(--surface-2)",
+                  }}
+                >
+                  <MapPin size={10} />
+                  {displayLocation}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* 본문 */}
           {postType === "temp_protect" || postType === "adoption" ? (
@@ -442,7 +564,7 @@ export default function PostCard({
           ) : (
             <MentionText
               text={post.content}
-              className="text-sm text-stone-700 leading-relaxed whitespace-pre-wrap"
+              style={{ fontSize: "14px", color: "var(--text-secondary)", lineHeight: "1.65", whiteSpace: "pre-wrap" }}
             />
           )}
 
@@ -451,20 +573,33 @@ export default function PostCard({
             <img
               src={imageUrls[0]}
               alt="게시물 이미지"
-              className="mt-3 w-full rounded-xl object-cover max-h-72"
+              style={{ marginTop: "14px", width: "100%", borderRadius: "var(--r-md)", objectFit: "cover", maxHeight: "280px" }}
             />
           )}
           {imageUrls.length >= 2 && (
-            <div className="mt-3 grid grid-cols-2 gap-1.5">
+            <div style={{ marginTop: "14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
               {imageUrls.slice(0, 4).map((url, i) => (
-                <div key={i} className="relative aspect-square">
+                <div key={i} style={{ position: "relative", aspectRatio: "1" }}>
                   <img
                     src={url}
                     alt={`이미지 ${i + 1}`}
-                    className="h-full w-full rounded-xl object-cover"
+                    style={{ width: "100%", height: "100%", borderRadius: "var(--r-md)", objectFit: "cover" }}
                   />
                   {i === 3 && imageUrls.length > 4 && (
-                    <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50 text-white font-bold text-xl">
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        borderRadius: "var(--r-md)",
+                        background: "rgba(0,0,0,0.5)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "white",
+                        fontWeight: 700,
+                        fontSize: "20px",
+                      }}
+                    >
                       +{imageUrls.length - 4}
                     </div>
                   )}
@@ -473,31 +608,74 @@ export default function PostCard({
             </div>
           )}
 
+          {/* 미니 지도 — report 타입 + 위도/경도 있을 때만 */}
+          {postType === "report" && post.latitude != null && post.longitude != null && (
+            <MiniMap
+              lat={post.latitude}
+              lng={post.longitude}
+              showExact={isAdmin || locStatus === "approved"}
+            />
+          )}
+
           {/* 좋아요 / 댓글 */}
-          <div className="mt-4 flex items-center gap-4 border-t border-stone-50 pt-3">
+          <div
+            style={{
+              marginTop: "16px",
+              paddingTop: "14px",
+              borderTop: "1.5px solid var(--surface-2)",
+              display: "flex",
+              alignItems: "center",
+              gap: "16px",
+            }}
+          >
             <button
               type="button"
               onClick={handleLike}
               disabled={liking}
-              className={`flex items-center gap-1.5 text-sm transition-colors disabled:opacity-60 ${
-                liked
-                  ? "text-red-500 hover:text-red-400"
-                  : "text-stone-400 hover:text-red-400"
-              }`}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                fontSize: "13px",
+                fontWeight: 500,
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: liked ? "var(--danger)" : "var(--text-muted)",
+                transition: "color 0.15s ease, transform 0.12s ease",
+                padding: 0,
+                fontFamily: "inherit",
+              }}
+              onMouseDown={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(0.9)"; }}
+              onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
             >
               <Heart
                 size={16}
-                className={liked ? "fill-red-500" : ""}
+                style={{ fill: liked ? "var(--danger)" : "none", transition: "fill 0.15s ease" }}
               />
               <span>{likesCount}</span>
             </button>
+
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 if (!disableLink) router.push(`/posts/${post.id}`);
               }}
-              className="flex items-center gap-1.5 text-sm text-stone-400 hover:text-amber-500 transition-colors"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                fontSize: "13px",
+                fontWeight: 500,
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--text-muted)",
+                padding: 0,
+                fontFamily: "inherit",
+              }}
             >
               <MessageCircle size={16} />
               <span>{post.comments_count}</span>
@@ -506,62 +684,180 @@ export default function PostCard({
             {(postType === "temp_protect" || postType === "adoption") && !isOwn && currentUserId && (
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowApplyModal(true);
+                onClick={(e) => { e.stopPropagation(); setShowApplyModal(true); }}
+                style={{
+                  marginLeft: "auto",
+                  borderRadius: "var(--r-pill)",
+                  background: "var(--accent-bg)",
+                  border: "1.5px solid var(--accent)",
+                  color: "var(--accent)",
+                  padding: "5px 14px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  transition: "transform 0.12s ease",
                 }}
-                className="ml-auto rounded-xl bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-100 transition-colors"
+                onMouseDown={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(0.95)"; }}
+                onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
               >
                 신청하기
               </button>
+            )}
+
+            {/* 위치 열람 신청 — report 타입, 본인 게시물 제외 */}
+            {postType === "report" && !isOwn && (
+              <div style={{ marginLeft: "auto" }}>
+                {locStatus === "approved" ? (
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      borderRadius: "var(--r-pill)",
+                      background: "var(--accent-bg)",
+                      border: "1.5px solid var(--accent)",
+                      color: "var(--accent)",
+                      padding: "5px 14px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    승인됨 📍
+                  </span>
+                ) : locStatus === "pending" ? (
+                  <button
+                    type="button"
+                    disabled
+                    style={{
+                      borderRadius: "var(--r-pill)",
+                      background: "var(--surface-2)",
+                      border: "1.5px solid var(--border)",
+                      color: "var(--text-muted)",
+                      padding: "5px 14px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: "not-allowed",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    신청 완료
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleLocationRequest}
+                    disabled={locRequesting}
+                    style={{
+                      borderRadius: "var(--r-pill)",
+                      background: "var(--accent-bg)",
+                      border: "1.5px solid var(--accent)",
+                      color: "var(--accent)",
+                      padding: "5px 14px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: locRequesting ? "not-allowed" : "pointer",
+                      fontFamily: "inherit",
+                      opacity: locRequesting ? 0.6 : 1,
+                      transition: "transform 0.12s ease",
+                    }}
+                    onMouseDown={(e) => { if (!locRequesting) (e.currentTarget as HTMLElement).style.transform = "scale(0.95)"; }}
+                    onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+                  >
+                    위치 열람 신청
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
       </article>
 
       {showReportModal && post.author_id && (
-        <ReportModal
-          postId={post.id}
-          reportedUserId={post.author_id}
-          onClose={() => setShowReportModal(false)}
-        />
+        <ReportModal postId={post.id} reportedUserId={post.author_id} onClose={() => setShowReportModal(false)} />
       )}
 
       {showApplyModal && (postType === "temp_protect" || postType === "adoption") && (
-        <ApplicationModal
-          postId={post.id}
-          postType={postType}
-          onClose={() => setShowApplyModal(false)}
-        />
+        <ApplicationModal postId={post.id} postType={postType} onClose={() => setShowApplyModal(false)} />
       )}
 
       {showDeleteConfirm && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 50,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0,0,0,0.4)",
+            padding: "16px",
+          }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-base font-bold text-stone-900">게시물 삭제</h3>
-            <p className="mt-2 text-sm text-stone-500">
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "360px",
+              borderRadius: "var(--r-lg)",
+              background: "var(--surface)",
+              padding: "28px 24px",
+              boxShadow: "var(--shadow-md)",
+            }}
+          >
+            <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)", margin: "0 0 8px" }}>
+              게시물 삭제
+            </h3>
+            <p style={{ fontSize: "14px", color: "var(--text-secondary)", margin: "0 0 24px" }}>
               삭제한 게시물은 복구할 수 없어요. 정말 삭제할까요?
             </p>
-            <div className="mt-5 flex justify-end gap-2">
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 disabled={deleting}
-                className="rounded-xl border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-600 hover:bg-stone-50 disabled:opacity-50 transition-colors"
+                style={{
+                  borderRadius: "var(--r-pill)",
+                  border: "1.5px solid var(--border)",
+                  background: "var(--surface)",
+                  padding: "9px 18px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  color: "var(--text-primary)",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  opacity: deleting ? 0.5 : 1,
+                }}
               >
                 취소
               </button>
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+                style={{
+                  borderRadius: "var(--r-pill)",
+                  background: "var(--danger)",
+                  border: "none",
+                  padding: "9px 18px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  color: "white",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  opacity: deleting ? 0.5 : 1,
+                }}
               >
                 {deleting ? "삭제 중..." : "삭제"}
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className="toast toast-error">
+          {toast}
         </div>
       )}
     </>

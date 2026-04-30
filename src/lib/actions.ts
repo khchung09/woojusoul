@@ -10,7 +10,7 @@ async function createNotification(
   recipientId: string,
   actorId: string,
   postId: string | null,
-  type: "like" | "comment" | "application" | "follow" | "mention"
+  type: "like" | "comment" | "application" | "follow" | "mention" | "location_request" | "location_approved" | "location_rejected" | "verification_approved" | "verification_request"
 ) {
   if (recipientId === actorId) return;
   await supabase.from("notifications").insert({
@@ -422,4 +422,173 @@ export async function deletePost(postId: string, imageUrl: string | null): Promi
 
   revalidatePath("/feed");
   revalidatePath("/profile");
+}
+
+export async function requestLocationAccess(
+  postId: string,
+  ownerId: string
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "로그인이 필요합니다" };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("is_verified")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.is_verified) return { error: "위치 열람은 인증 유저만 가능해요" };
+
+  const { error } = await supabase.from("location_requests").insert({
+    post_id: postId,
+    requester_id: user.id,
+    owner_id: ownerId,
+  });
+
+  if (error) {
+    if (error.code === "23505") return { error: "이미 신청한 게시물입니다" };
+    return { error: "신청에 실패했습니다" };
+  }
+
+  await createNotification(supabase, ownerId, user.id, postId, "location_request");
+
+  revalidatePath(`/posts/${postId}`);
+  return {};
+}
+
+export async function respondToLocationRequest(
+  postId: string,
+  requesterId: string,
+  action: "approved" | "rejected"
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "로그인이 필요합니다" };
+
+  const { error } = await supabase
+    .from("location_requests")
+    .update({ status: action })
+    .eq("post_id", postId)
+    .eq("requester_id", requesterId)
+    .eq("owner_id", user.id);
+
+  if (error) return { error: "처리에 실패했습니다" };
+
+  const notifType = action === "approved" ? "location_approved" : "location_rejected";
+  await createNotification(supabase, requesterId, user.id, postId, notifType);
+
+  revalidatePath("/notifications");
+  revalidatePath(`/posts/${postId}`);
+  return {};
+}
+
+// ── 관리자 전용 액션 ──────────────────────────────────
+
+async function assertAdmin(supabase: SupabaseClient): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  return data?.role === "admin" ? user.id : null;
+}
+
+export async function approveVerification(userId: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const adminId = await assertAdmin(supabase);
+  if (!adminId) return { error: "관리자만 가능합니다" };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ is_verified: true })
+    .eq("id", userId);
+
+  if (error) return { error: "처리에 실패했습니다" };
+
+  await createNotification(supabase, userId, adminId, null, "verification_approved");
+
+  revalidatePath("/admin");
+  return {};
+}
+
+export async function rejectVerification(userId: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const adminId = await assertAdmin(supabase);
+  if (!adminId) return { error: "관리자만 가능합니다" };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ real_name: null, phone: null })
+    .eq("id", userId);
+
+  if (error) return { error: "처리에 실패했습니다" };
+
+  revalidatePath("/admin");
+  return {};
+}
+
+export async function adminUpdateLocationRequest(
+  requestId: string,
+  status: "approved" | "rejected"
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const adminId = await assertAdmin(supabase);
+  if (!adminId) return { error: "관리자만 가능합니다" };
+
+  const { data: req } = await supabase
+    .from("location_requests")
+    .select("requester_id, post_id")
+    .eq("id", requestId)
+    .single();
+
+  if (!req) return { error: "신청을 찾을 수 없어요" };
+
+  const { error } = await supabase
+    .from("location_requests")
+    .update({ status })
+    .eq("id", requestId);
+
+  if (error) return { error: "처리에 실패했습니다" };
+
+  const notifType = status === "approved" ? "location_approved" : "location_rejected";
+  await createNotification(supabase, req.requester_id, adminId, req.post_id, notifType);
+
+  revalidatePath("/admin");
+  return {};
+}
+
+export async function submitVerificationRequest(
+  realName: string,
+  phone: string
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "로그인이 필요합니다" };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ real_name: realName.trim(), phone: phone.trim() })
+    .eq("id", user.id);
+
+  if (error) return { error: "저장에 실패했습니다" };
+
+  // 관리자 전체에게 알림 전송
+  const { data: admins } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("role", "admin");
+
+  if (admins) {
+    for (const admin of admins) {
+      await createNotification(supabase, admin.id, user.id, null, "verification_request");
+    }
+  }
+
+  revalidatePath("/profile");
+  return {};
 }

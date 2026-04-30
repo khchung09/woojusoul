@@ -25,9 +25,7 @@ export default function SignupPage() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: { username },
-      },
+      options: { data: { username } },
     });
 
     if (error) {
@@ -46,15 +44,54 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-amber-50 px-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-sm">
-        <div className="mb-8 flex flex-col items-center gap-2">
-          <Image src="/woojusoulicon.png" alt="우주소울" width={64} height={64} style={{ mixBlendMode: "multiply" }} />
-          <h1 className="text-2xl font-bold text-stone-900">우주소울 가입하기</h1>
-          <p className="text-sm text-stone-500">유기동물과 사람을 잇는 여정을 시작해요</p>
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "var(--bg)",
+        padding: "16px",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "400px",
+          borderRadius: "var(--r-lg)",
+          background: "var(--surface)",
+          padding: "40px 32px",
+          boxShadow: "var(--shadow-md)",
+          border: "1.5px solid var(--border)",
+        }}
+      >
+        {/* 로고 */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "10px",
+            marginBottom: "32px",
+          }}
+        >
+          <Image
+            src="/woojusoulicon.png"
+            alt="우주소울"
+            width={68}
+            height={68}
+            style={{ mixBlendMode: "multiply" }}
+          />
+          <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+            우주소울 가입하기
+          </h1>
+          <p style={{ fontSize: "14px", color: "var(--text-muted)", margin: 0 }}>
+            유기동물과 사람을 잇는 여정을 시작해요
+          </p>
         </div>
 
-        <form onSubmit={handleSignup} className="flex flex-col gap-4">
+        <form onSubmit={handleSignup} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           <Input
             id="username"
             type="text"
@@ -83,15 +120,28 @@ export default function SignupPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-          {error && <p className="text-sm text-red-500">{error}</p>}
-          <Button type="submit" size="lg" loading={loading} className="w-full mt-2">
+          {error && (
+            <p
+              style={{
+                fontSize: "13px",
+                color: "var(--danger)",
+                background: "var(--danger-bg)",
+                padding: "10px 14px",
+                borderRadius: "var(--r-md)",
+                margin: 0,
+              }}
+            >
+              {error}
+            </p>
+          )}
+          <Button type="submit" size="lg" loading={loading} style={{ width: "100%", marginTop: "4px" }}>
             회원가입
           </Button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-stone-500">
+        <p style={{ marginTop: "24px", textAlign: "center", fontSize: "14px", color: "var(--text-muted)" }}>
           이미 계정이 있으신가요?{" "}
-          <Link href="/login" className="font-semibold text-amber-600 hover:underline">
+          <Link href="/login" style={{ fontWeight: 700, color: "var(--accent)", textDecoration: "none" }}>
             로그인
           </Link>
         </p>

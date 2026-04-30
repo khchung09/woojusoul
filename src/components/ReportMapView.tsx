@@ -26,21 +26,25 @@ const STATUS_LABEL: Record<string, string> = {
 
 interface Props {
   posts: ReportPost[];
-  isVerified: boolean;
+  approvedPostIds: string[];  // 승인된 location_request의 post_id 목록
+  isAdmin: boolean;           // role='admin'이면 모든 핀 정확히 표시
 }
 
-export function ReportMapView({ posts, isVerified }: Props) {
+export function ReportMapView({ posts, approvedPostIds, isAdmin }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<KakaoMap | null>(null);
   const isLoaded = useKakaoMaps();
   const [selectedPost, setSelectedPost] = useState<ReportPost | null>(null);
 
+  const approvedSet = new Set(approvedPostIds);
+  const hasBlurredPins = !isAdmin; // 관리자만 안내 문구 숨김, 일반 유저는 항상 표시
+
   useEffect(() => {
-    if (!isLoaded || !containerRef.current || mapRef.current) return;
+    if (!isLoaded) return;                          // SDK 완전 초기화 전 차단
+    if (!containerRef.current || mapRef.current) return;
 
     const { kakao } = window;
 
-    // 지도 중심: 게시물 평균 좌표 or 서울 시청
     const avgLat =
       posts.length > 0
         ? posts.reduce((s, p) => s + p.latitude, 0) / posts.length
@@ -58,13 +62,14 @@ export function ReportMapView({ posts, isVerified }: Props) {
 
     posts.forEach((post) => {
       const latlng = new kakao.maps.LatLng(post.latitude, post.longitude);
+      const showExact = isAdmin || approvedSet.has(post.id);
 
-      if (isVerified) {
-        // 인증 유저: 정확한 핀
+      if (showExact) {
+        // 정확한 핀
         const marker = new kakao.maps.Marker({ map, position: latlng });
         kakao.maps.event.addListener(marker, "click", () => setSelectedPost(post));
       } else {
-        // 일반 유저: 반경 500m 반투명 원 + 흐린 중심 점
+        // 반경 500m 반투명 원 + 흐린 중심 점
         new kakao.maps.Circle({
           center: latlng,
           radius: 500,
@@ -76,7 +81,6 @@ export function ReportMapView({ posts, isVerified }: Props) {
           map,
         });
 
-        // 클릭 가능한 흐린 점
         const dot = document.createElement("div");
         dot.style.cssText =
           "width:28px;height:28px;border-radius:50%;background:rgba(245,158,11,0.65);filter:blur(5px);cursor:pointer;transform:translate(-50%,-50%);";
@@ -92,15 +96,17 @@ export function ReportMapView({ posts, isVerified }: Props) {
         });
       }
     });
-  }, [isLoaded, posts, isVerified]);
+  }, [isLoaded, posts, isAdmin]);
+
+  const canSeeExact = (post: ReportPost) => isAdmin || approvedSet.has(post.id);
 
   return (
     <div className="flex flex-col gap-3">
-      {!isVerified && (
+      {hasBlurredPins && (
         <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-700">
           <MapPin size={13} className="mt-0.5 shrink-0" />
           <span>
-            위치는 반경 500m 범위로만 표시됩니다. 정확한 위치는 인증된 회원만 확인할 수 있어요.
+            위치는 반경 500m 범위로만 표시됩니다. 정확한 위치는 위치 열람 승인 후 확인할 수 있어요.
           </span>
         </div>
       )}
@@ -144,7 +150,7 @@ export function ReportMapView({ posts, isVerified }: Props) {
             )}
             <span className="flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-500">
               <MapPin size={9} />
-              {isVerified && selectedPost.location_address
+              {canSeeExact(selectedPost) && selectedPost.location_address
                 ? selectedPost.location_address
                 : selectedPost.location ?? "위치 정보 없음"}
             </span>
