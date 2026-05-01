@@ -241,13 +241,15 @@ export default function PostCard({
   const badge = TYPE_CONFIG[postType];
   const authorName = post.profiles?.username ?? "알 수 없음";
   const statusBadge = post.animal_status ? ANIMAL_STATUS_BADGE[post.animal_status] : null;
-  const displayLocation =
-    postType === "report"
-      ? isVerified && post.location_address ? post.location_address : post.location
-      : post.location;
   const imageUrls = parseImageUrls(post.image_url);
   const isOwn = !!currentUserId && currentUserId === post.author_id;
   const isBlinded = ((post.report_count ?? 0) >= 5 || post.profiles?.is_blinded === true) && !isOwn;
+  // 작성자·관리자·승인된 열람 요청자만 정확한 위치 표시
+  const canSeeExactLocation = isAdmin || isOwn || locStatus === "approved";
+  const displayLocation =
+    postType === "report"
+      ? canSeeExactLocation && post.location_address ? post.location_address : post.location
+      : post.location;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -303,7 +305,6 @@ export default function PostCard({
   function handleLocationRequest(e: React.MouseEvent) {
     e.stopPropagation();
     if (!currentUserId) { router.push("/login"); return; }
-    if (!isVerified) { showToast("위치 열람은 인증 유저만 신청할 수 있어요"); return; }
     startLocTransition(async () => {
       const result = await requestLocationAccess(post.id, post.author_id);
       if (result.error) { showToast(result.error); return; }
@@ -613,7 +614,8 @@ export default function PostCard({
             <MiniMap
               lat={post.latitude}
               lng={post.longitude}
-              showExact={isAdmin || locStatus === "approved"}
+              showExact={isAdmin || isOwn || locStatus === "approved"}
+              postId={post.id}
             />
           )}
 
@@ -706,8 +708,8 @@ export default function PostCard({
               </button>
             )}
 
-            {/* 위치 열람 신청 — report 타입, 본인 게시물 제외 */}
-            {postType === "report" && !isOwn && (
+            {/* 위치 열람 신청 — report 타입, 본인 게시물 제외, 로그인 유저만 */}
+            {postType === "report" && !isOwn && !!currentUserId && (
               <div style={{ marginLeft: "auto" }}>
                 {locStatus === "approved" ? (
                   <span
@@ -743,6 +745,51 @@ export default function PostCard({
                     }}
                   >
                     신청 완료
+                  </button>
+                ) : locStatus === "rejected" ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>거절됨</span>
+                    <button
+                      type="button"
+                      onClick={handleLocationRequest}
+                      disabled={locRequesting}
+                      style={{
+                        borderRadius: "var(--r-pill)",
+                        background: "var(--danger-bg)",
+                        border: "1.5px solid var(--danger)",
+                        color: "var(--danger)",
+                        padding: "5px 14px",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        cursor: locRequesting ? "not-allowed" : "pointer",
+                        fontFamily: "inherit",
+                        opacity: locRequesting ? 0.6 : 1,
+                        transition: "transform 0.12s ease",
+                      }}
+                      onMouseDown={(e) => { if (!locRequesting) (e.currentTarget as HTMLElement).style.transform = "scale(0.95)"; }}
+                      onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+                    >
+                      재신청
+                    </button>
+                  </div>
+                ) : !isVerified ? (
+                  <button
+                    type="button"
+                    disabled
+                    style={{
+                      borderRadius: "var(--r-pill)",
+                      background: "var(--surface-2)",
+                      border: "1.5px solid var(--border)",
+                      color: "var(--text-muted)",
+                      padding: "5px 14px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: "not-allowed",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    인증 후 신청 가능
                   </button>
                 ) : (
                   <button

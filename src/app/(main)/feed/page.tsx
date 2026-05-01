@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import type { PostWithAuthor } from "@/types/models";
 import PostCard from "@/components/PostCard";
@@ -22,8 +22,9 @@ export default async function FeedPage() {
     : { data: null };
   const likedPostIds = new Set(likesData?.map((l) => l.post_id) ?? []);
 
+  // 서비스 롤로 RLS 우회 — requester_id 필터로 해당 유저 데이터만 조회
   const { data: locRequestsData } = user
-    ? await supabase
+    ? await createServiceClient()
         .from("location_requests")
         .select("post_id, status")
         .eq("requester_id", user.id)

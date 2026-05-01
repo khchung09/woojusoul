@@ -28,6 +28,7 @@ export default async function PublicProfilePage({
     { count: followerCount },
     { count: followingCount },
     { data: followData },
+    { data: locRequestsData },
   ] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", id).single(),
     user
@@ -46,6 +47,13 @@ export default async function PublicProfilePage({
     user
       ? supabase.from("follows").select("id").eq("follower_id", user.id).eq("following_id", id).maybeSingle()
       : Promise.resolve({ data: null }),
+    // post_id 단위로 현재 로그인 유저의 위치 열람 신청 상태 조회
+    user
+      ? supabase
+          .from("location_requests")
+          .select("post_id, status")
+          .eq("requester_id", user.id)
+      : Promise.resolve({ data: null }),
   ]);
 
   if (!profileData) notFound();
@@ -55,6 +63,10 @@ export default async function PublicProfilePage({
   const posts = (postsData ?? []) as PostWithAuthor[];
   const likedPostIds = new Set(likesData?.map((l) => l.post_id) ?? []);
   const isFollowing = !!followData;
+  // requester_id = 현재 로그인 유저, post_id 단위로 상태 매핑
+  const locRequestMap = new Map<string, "pending" | "approved" | "rejected">(
+    (locRequestsData ?? []).map((r) => [r.post_id, r.status as "pending" | "approved" | "rejected"])
+  );
 
   return (
     <div className="flex flex-col gap-5">
@@ -131,6 +143,7 @@ export default async function PublicProfilePage({
               isVerified={isVerified}
               currentUserId={user?.id ?? null}
               initialLiked={likedPostIds.has(post.id)}
+              initialLocationRequest={locRequestMap.get(post.id) ?? null}
             />
           ))}
         </div>

@@ -53,6 +53,7 @@ interface KakaoMarker {
   getPosition(): KakaoLatLng;
   setPosition(latlng: KakaoLatLng): void;
   setDraggable(draggable: boolean): void;
+  setZIndex(zIndex: number): void;
 }
 
 interface KakaoCircle {

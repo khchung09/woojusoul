@@ -45,6 +45,17 @@ export default async function SearchPage({ searchParams }: Props) {
     : { data: null };
   const likedPostIds = likesData?.map((l) => l.post_id) ?? [];
 
+  // post_id 단위로 현재 유저의 위치 열람 신청 상태 조회 (Client Component에 plain object로 전달)
+  const { data: locRequestsData } = user
+    ? await supabase
+        .from("location_requests")
+        .select("post_id, status")
+        .eq("requester_id", user.id)
+    : { data: null };
+  const locRequestRecord: Record<string, "pending" | "approved" | "rejected"> = Object.fromEntries(
+    (locRequestsData ?? []).map((r) => [r.post_id, r.status as "pending" | "approved" | "rejected"])
+  );
+
   let posts: PostWithAuthor[] = [];
   let users: UserResult[] = [];
 
@@ -96,6 +107,7 @@ export default async function SearchPage({ searchParams }: Props) {
       isVerified={isVerified}
       currentUserId={user?.id ?? null}
       likedPostIds={likedPostIds}
+      locRequestRecord={locRequestRecord}
     />
   );
 }

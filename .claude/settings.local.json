@@ -5,7 +5,8 @@
       "Bash(node -e ' *)",
       "Bash(xargs -I {} find {} -type f \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" \\\\\\))",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\chung\\\\paw-app\\\\src\" -Recurse -Filter \"*.ts\" -o File)",
-      "Bash(Select-Object FullName)"
+      "Bash(Select-Object FullName)",
+      "Bash(xargs grep *)"
     ]
   }
 }

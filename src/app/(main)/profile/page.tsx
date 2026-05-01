@@ -38,6 +38,15 @@ export default async function ProfilePage() {
   const { data: likesData } = await supabase.from("likes").select("post_id").eq("user_id", user.id);
   const likedPostIds = new Set(likesData?.map((l) => l.post_id) ?? []);
 
+  // post_id 단위로 현재 유저의 위치 열람 신청 상태 조회
+  const { data: locRequestsData } = await supabase
+    .from("location_requests")
+    .select("post_id, status")
+    .eq("requester_id", user.id);
+  const locRequestMap = new Map<string, "pending" | "approved" | "rejected">(
+    (locRequestsData ?? []).map((r) => [r.post_id, r.status as "pending" | "approved" | "rejected"])
+  );
+
   const [{ count: followerCount }, { count: followingCount }] = await Promise.all([
     supabase.from("follows").select("id", { count: "exact", head: true }).eq("following_id", user.id),
     supabase.from("follows").select("id", { count: "exact", head: true }).eq("follower_id", user.id),
@@ -170,6 +179,7 @@ export default async function ProfilePage() {
             isAdmin={profile.role === "admin"}
             currentUserId={user.id}
             initialLiked={likedPostIds.has(post.id)}
+            initialLocationRequest={locRequestMap.get(post.id) ?? null}
           />
         ))}
       </div>

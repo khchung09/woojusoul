@@ -45,10 +45,11 @@ interface SearchClientProps {
   isVerified: boolean;
   currentUserId: string | null;
   likedPostIds: string[];
+  locRequestRecord: Record<string, "pending" | "approved" | "rejected">;
 }
 
 export default function SearchClient({
-  initialQ, initialType, initialMode, posts, users, isVerified, currentUserId, likedPostIds,
+  initialQ, initialType, initialMode, posts, users, isVerified, currentUserId, likedPostIds, locRequestRecord,
 }: SearchClientProps) {
   const router = useRouter();
   const [q, setQ] = useState(initialQ);
@@ -351,6 +352,7 @@ export default function SearchClient({
               isVerified={isVerified}
               currentUserId={currentUserId}
               initialLiked={likedSet.has(post.id)}
+              initialLocationRequest={locRequestRecord[post.id] ?? null}
             />
           ))}
         </div>

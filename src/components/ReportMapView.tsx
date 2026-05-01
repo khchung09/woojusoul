@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useKakaoMaps } from "@/hooks/useKakaoMaps";
 import type { ReportPost } from "@/types/models";
-import { MapPin, Loader2, X } from "lucide-react";
+import { MapPin, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "@/lib/dateUtils";
 
 const ANIMAL_TYPE_LABEL: Record<string, string> = {
@@ -25,84 +25,59 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 interface Props {
-  posts: ReportPost[];
-  approvedPostIds: string[];  // 승인된 location_request의 post_id 목록
-  isAdmin: boolean;           // role='admin'이면 모든 핀 정확히 표시
+  post: ReportPost;
+  showExact: boolean;
 }
 
-export function ReportMapView({ posts, approvedPostIds, isAdmin }: Props) {
+export function ReportMapView({ post, showExact }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<KakaoMap | null>(null);
   const isLoaded = useKakaoMaps();
-  const [selectedPost, setSelectedPost] = useState<ReportPost | null>(null);
-
-  const approvedSet = new Set(approvedPostIds);
-  const hasBlurredPins = !isAdmin; // 관리자만 안내 문구 숨김, 일반 유저는 항상 표시
 
   useEffect(() => {
-    if (!isLoaded) return;                          // SDK 완전 초기화 전 차단
+    if (!isLoaded) return;
     if (!containerRef.current || mapRef.current) return;
 
     const { kakao } = window;
 
-    const avgLat =
-      posts.length > 0
-        ? posts.reduce((s, p) => s + p.latitude, 0) / posts.length
-        : 37.5665;
-    const avgLng =
-      posts.length > 0
-        ? posts.reduce((s, p) => s + p.longitude, 0) / posts.length
-        : 126.978;
-
-    const map = new kakao.maps.Map(containerRef.current, {
-      center: new kakao.maps.LatLng(avgLat, avgLng),
-      level: posts.length > 0 ? 8 : 7,
-    });
-    mapRef.current = map;
-
-    posts.forEach((post) => {
+    if (showExact) {
       const latlng = new kakao.maps.LatLng(post.latitude, post.longitude);
-      const showExact = isAdmin || approvedSet.has(post.id);
+      const map = new kakao.maps.Map(containerRef.current, {
+        center: latlng,
+        level: 4,
+      });
+      mapRef.current = map;
+      new kakao.maps.Marker({ map, position: latlng });
+    } else {
+      // 랜덤 오프셋으로 실제 위치 노출 방지 — 중심점 없이 500m 원만 표시
+      const offsetLat = post.latitude + (Math.random() - 0.5) * 0.004;
+      const offsetLng = post.longitude + (Math.random() - 0.5) * 0.004;
+      const offsetLatlng = new kakao.maps.LatLng(offsetLat, offsetLng);
+      const map = new kakao.maps.Map(containerRef.current, {
+        center: offsetLatlng,
+        level: 5,
+      });
+      mapRef.current = map;
+      new kakao.maps.Circle({
+        center: offsetLatlng,
+        radius: 500,
+        strokeWeight: 1,
+        strokeColor: "#D97706",
+        strokeOpacity: 0.35,
+        fillColor: "#F59E0B",
+        fillOpacity: 0.15,
+        map,
+      });
+    }
+  }, [isLoaded, post, showExact]);
 
-      if (showExact) {
-        // 정확한 핀
-        const marker = new kakao.maps.Marker({ map, position: latlng });
-        kakao.maps.event.addListener(marker, "click", () => setSelectedPost(post));
-      } else {
-        // 반경 500m 반투명 원 + 흐린 중심 점
-        new kakao.maps.Circle({
-          center: latlng,
-          radius: 500,
-          strokeWeight: 1,
-          strokeColor: "#D97706",
-          strokeOpacity: 0.35,
-          fillColor: "#F59E0B",
-          fillOpacity: 0.15,
-          map,
-        });
-
-        const dot = document.createElement("div");
-        dot.style.cssText =
-          "width:28px;height:28px;border-radius:50%;background:rgba(245,158,11,0.65);filter:blur(5px);cursor:pointer;transform:translate(-50%,-50%);";
-        dot.onclick = () => setSelectedPost(post);
-
-        new kakao.maps.CustomOverlay({
-          position: latlng,
-          content: dot,
-          map,
-          zIndex: 10,
-          xAnchor: 0,
-          yAnchor: 0,
-        });
-      }
-    });
-  }, [isLoaded, posts, isAdmin]);
-
-  const canSeeExact = (post: ReportPost) => isAdmin || approvedSet.has(post.id);
+  const displayLocation = showExact && post.location_address
+    ? post.location_address
+    : post.location ?? "위치 정보 없음";
 
   return (
     <div className="flex flex-col gap-3">
-      {hasBlurredPins && (
+      {!showExact && (
         <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-700">
           <MapPin size={13} className="mt-0.5 shrink-0" />
           <span>
@@ -113,7 +88,7 @@ export function ReportMapView({ posts, approvedPostIds, isAdmin }: Props) {
 
       <div
         className="relative w-full overflow-hidden rounded-2xl border border-stone-100 shadow-sm"
-        style={{ height: "calc(100dvh - 220px)", minHeight: 380 }}
+        style={{ height: "calc(100dvh - 400px)", minHeight: 260 }}
       >
         {!isLoaded && (
           <div className="absolute inset-0 flex items-center justify-center bg-stone-100">
@@ -123,47 +98,36 @@ export function ReportMapView({ posts, approvedPostIds, isAdmin }: Props) {
         <div ref={containerRef} className="h-full w-full" />
       </div>
 
-      {selectedPost && (
-        <div className="rounded-2xl border border-stone-100 bg-white p-4 shadow-sm">
-          <div className="mb-2 flex items-start justify-between gap-2">
-            <p className="text-sm font-semibold text-stone-900">
-              @{selectedPost.profiles?.username ?? "알 수 없음"}
-            </p>
-            <button
-              onClick={() => setSelectedPost(null)}
-              className="flex h-6 w-6 items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-colors"
-            >
-              <X size={14} />
-            </button>
-          </div>
+      {/* 게시물 카드 — 항상 표시 */}
+      <div className="rounded-2xl border border-stone-100 bg-white p-4 shadow-sm">
+        <p className="mb-2 text-sm font-semibold text-stone-900">
+          @{post.profiles?.username ?? "알 수 없음"}
+        </p>
 
-          <div className="mb-2.5 flex flex-wrap gap-1.5">
-            {selectedPost.animal_status && (
-              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_STYLE[selectedPost.animal_status]}`}>
-                {STATUS_LABEL[selectedPost.animal_status]}
-              </span>
-            )}
-            {selectedPost.animal_type && (
-              <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
-                {ANIMAL_TYPE_LABEL[selectedPost.animal_type]}
-              </span>
-            )}
-            <span className="flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-500">
-              <MapPin size={9} />
-              {canSeeExact(selectedPost) && selectedPost.location_address
-                ? selectedPost.location_address
-                : selectedPost.location ?? "위치 정보 없음"}
+        <div className="mb-2.5 flex flex-wrap gap-1.5">
+          {post.animal_status && (
+            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_STYLE[post.animal_status]}`}>
+              {STATUS_LABEL[post.animal_status]}
             </span>
-          </div>
-
-          <p className="line-clamp-3 text-sm leading-relaxed text-stone-700">
-            {selectedPost.content}
-          </p>
-          <p className="mt-2 text-xs text-stone-400">
-            {formatDistanceToNow(selectedPost.created_at)}
-          </p>
+          )}
+          {post.animal_type && (
+            <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
+              {ANIMAL_TYPE_LABEL[post.animal_type]}
+            </span>
+          )}
+          <span className="flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-500">
+            <MapPin size={9} />
+            {displayLocation}
+          </span>
         </div>
-      )}
+
+        <p className="line-clamp-3 text-sm leading-relaxed text-stone-700">
+          {post.content}
+        </p>
+        <p className="mt-2 text-xs text-stone-400">
+          {formatDistanceToNow(post.created_at)}
+        </p>
+      </div>
     </div>
   );
 }

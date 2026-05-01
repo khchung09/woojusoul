@@ -9,9 +9,10 @@ interface Props {
   lat: number;
   lng: number;
   showExact: boolean;
+  postId: string;
 }
 
-export function MiniMap({ lat, lng, showExact }: Props) {
+export function MiniMap({ lat, lng, showExact, postId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<KakaoMap | null>(null);
   const isLoaded = useKakaoMaps();
@@ -22,10 +23,15 @@ export function MiniMap({ lat, lng, showExact }: Props) {
     if (!containerRef.current || mapRef.current) return;
 
     const { kakao } = window;
-    const latlng = new kakao.maps.LatLng(lat, lng);
+
+    // showExact가 false일 때 랜덤 오프셋으로 실제 위치 노출 방지
+    const displayLat = showExact ? lat : lat + (Math.random() - 0.5) * 0.004;
+    const displayLng = showExact ? lng : lng + (Math.random() - 0.5) * 0.004;
+
+    const displayLatlng = new kakao.maps.LatLng(displayLat, displayLng);
 
     const map = new kakao.maps.Map(containerRef.current, {
-      center: latlng,
+      center: displayLatlng,
       level: showExact ? 4 : 5,
     });
 
@@ -36,11 +42,12 @@ export function MiniMap({ lat, lng, showExact }: Props) {
     mapRef.current = map;
 
     if (showExact) {
-      new kakao.maps.Marker({ map, position: latlng });
+      // 정확한 위치에만 마커 표시
+      new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(lat, lng) });
     } else {
-      // 반경 500m 반투명 원
+      // 오프셋 적용된 중심으로 500m 원 표시
       new kakao.maps.Circle({
-        center: latlng,
+        center: displayLatlng,
         radius: 500,
         strokeWeight: 1,
         strokeColor: "#D97706",
@@ -84,7 +91,11 @@ export function MiniMap({ lat, lng, showExact }: Props) {
       {/* 투명 클릭 인터셉터 — 지도 인터랙션 전부 차단, 클릭 시 /map 이동 */}
       <div
         style={{ position: "absolute", inset: 0, zIndex: 2, cursor: "pointer" }}
-        onClick={(e) => { e.stopPropagation(); router.push("/map"); }}
+        onClick={(e) => {
+          console.log("이동 URL:", `/map?post_id=${postId}`);
+          e.stopPropagation();
+          router.push(`/map?post_id=${postId}`);
+        }}
       />
 
       {/* 비승인 안내 오버레이 */}
