@@ -107,16 +107,21 @@ export default async function MapPage({
 
   // 정확한 위치 표시 여부 결정
   let showExact = !!(isAdmin || isOwn);
-  if (!showExact && user) {
-    const { data: approvalData } = await createServiceClient()
+  if (!showExact && user && focusPostId) {
+    const serviceClient = createServiceClient();
+    const { data: approvalData, error } = await serviceClient
       .from("location_requests")
       .select("id")
       .eq("post_id", focusPostId)
       .eq("requester_id", user.id)
       .eq("status", "approved")
       .maybeSingle();
+
+    console.log("approvalData:", approvalData, "error:", error);
     showExact = !!approvalData;
   }
+
+  console.log("최종 showExact:", showExact);
 
   return (
     <div className="flex flex-col gap-4">

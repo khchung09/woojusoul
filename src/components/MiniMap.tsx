@@ -20,34 +20,40 @@ export function MiniMap({ lat, lng, showExact, postId }: Props) {
 
   useEffect(() => {
     if (!isLoaded) return;
-    if (!containerRef.current || mapRef.current) return;
+    if (!containerRef.current) return;
 
     const { kakao } = window;
 
-    // showExact가 false일 때 랜덤 오프셋으로 실제 위치 노출 방지
-    const displayLat = showExact ? lat : lat + (Math.random() - 0.5) * 0.004;
-    const displayLng = showExact ? lng : lng + (Math.random() - 0.5) * 0.004;
+    // 이전 지도 완전히 제거
+    if (mapRef.current) {
+      containerRef.current.innerHTML = "";
+      mapRef.current = null;
+    }
 
-    const displayLatlng = new kakao.maps.LatLng(displayLat, displayLng);
-
-    const map = new kakao.maps.Map(containerRef.current, {
-      center: displayLatlng,
-      level: showExact ? 4 : 5,
-    });
-
-    // 카드 안이므로 스크롤·드래그·줌 전부 비활성화
-    map.setDraggable(false);
-    map.setZoomable(false);
-
-    mapRef.current = map;
+    const realLatlng = new kakao.maps.LatLng(lat, lng);
 
     if (showExact) {
-      // 정확한 위치에만 마커 표시
-      new kakao.maps.Marker({ map, position: new kakao.maps.LatLng(lat, lng) });
+      const map = new kakao.maps.Map(containerRef.current, {
+        center: realLatlng,
+        level: 4,
+      });
+      map.setDraggable(false);
+      map.setZoomable(false);
+      mapRef.current = map;
+      new kakao.maps.Marker({ map, position: realLatlng });
     } else {
-      // 오프셋 적용된 중심으로 500m 원 표시
+      const offsetLat = lat + (Math.random() - 0.5) * 0.004;
+      const offsetLng = lng + (Math.random() - 0.5) * 0.004;
+      const offsetLatlng = new kakao.maps.LatLng(offsetLat, offsetLng);
+      const map = new kakao.maps.Map(containerRef.current, {
+        center: offsetLatlng,
+        level: 5,
+      });
+      map.setDraggable(false);
+      map.setZoomable(false);
+      mapRef.current = map;
       new kakao.maps.Circle({
-        center: displayLatlng,
+        center: offsetLatlng,
         radius: 500,
         strokeWeight: 1,
         strokeColor: "#D97706",

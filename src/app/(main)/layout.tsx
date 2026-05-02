@@ -1,15 +1,20 @@
+import { Suspense } from "react";
 import { Navbar } from "@/components/Navbar";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
+import { KakaoPreloader } from "@/components/KakaoPreloader";
 
-export default async function MainLayout({ children }: { children: React.ReactNode }) {
+async function NavbarServer() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile } = user
     ? await supabase.from("profiles").select("role").eq("id", user.id).single()
     : { data: null };
   const isAdmin = profile?.role === "admin";
+  return <Navbar isAdmin={isAdmin} />;
+}
 
+export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{ minHeight: "100vh", background: "var(--bg)" }}
@@ -41,7 +46,9 @@ export default async function MainLayout({ children }: { children: React.ReactNo
             우주소울
           </span>
         </div>
-        <Navbar isAdmin={isAdmin} />
+        <Suspense fallback={null}>
+          <NavbarServer />
+        </Suspense>
       </aside>
 
       {/* 메인 콘텐츠 */}
@@ -56,8 +63,13 @@ export default async function MainLayout({ children }: { children: React.ReactNo
 
       {/* 모바일 하단 네비게이션 */}
       <div className="md:hidden">
-        <Navbar isAdmin={isAdmin} />
+        <Suspense fallback={null}>
+          <NavbarServer />
+        </Suspense>
       </div>
+
+      {/* 지도 탭 진입 전 Kakao SDK 백그라운드 프리로드 */}
+      <KakaoPreloader />
     </div>
   );
 }

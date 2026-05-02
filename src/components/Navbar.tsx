@@ -104,6 +104,7 @@ export function Navbar({ isAdmin = false }: { isAdmin?: boolean }) {
             <Link
               key={href}
               href={href}
+              prefetch={true}
               style={mobileLink(isActive(href))}
               {...pressHandlers}
             >
@@ -118,6 +119,7 @@ export function Navbar({ isAdmin = false }: { isAdmin?: boolean }) {
           {/* 프로필 */}
           <Link
             href="/profile"
+            prefetch={true}
             style={mobileLink(isActive("/profile"))}
             {...pressHandlers}
           >
@@ -136,6 +138,7 @@ export function Navbar({ isAdmin = false }: { isAdmin?: boolean }) {
             <Link
               key={href}
               href={href}
+              prefetch={true}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -171,6 +174,7 @@ export function Navbar({ isAdmin = false }: { isAdmin?: boolean }) {
               <Link
                 key={href}
                 href={href}
+                prefetch={true}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -201,6 +205,7 @@ export function Navbar({ isAdmin = false }: { isAdmin?: boolean }) {
             <Link
               key={href}
               href={href}
+              prefetch={true}
               style={{
                 display: "flex",
                 alignItems: "center",

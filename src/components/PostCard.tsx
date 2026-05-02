@@ -243,6 +243,7 @@ export default function PostCard({
   const statusBadge = post.animal_status ? ANIMAL_STATUS_BADGE[post.animal_status] : null;
   const imageUrls = parseImageUrls(post.image_url);
   const isOwn = !!currentUserId && currentUserId === post.author_id;
+  console.log("locStatus:", locStatus, "showExact:", isAdmin || isOwn || locStatus === "approved");
   const isBlinded = ((post.report_count ?? 0) >= 5 || post.profiles?.is_blinded === true) && !isOwn;
   // 작성자·관리자·승인된 열람 요청자만 정확한 위치 표시
   const canSeeExactLocation = isAdmin || isOwn || locStatus === "approved";

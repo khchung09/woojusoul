@@ -6,7 +6,11 @@
       "Bash(xargs -I {} find {} -type f \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" \\\\\\))",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\chung\\\\paw-app\\\\src\" -Recurse -Filter \"*.ts\" -o File)",
       "Bash(Select-Object FullName)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(grep -v \"^$\")",
+      "Bash(npx vercel *)",
+      "Bash(kill %1)",
+      "Bash(wait)"
     ]
   }
 }

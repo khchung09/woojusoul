@@ -35,8 +35,15 @@ export function ReportMapView({ post, showExact }: Props) {
   const isLoaded = useKakaoMaps();
 
   useEffect(() => {
+    console.log("ReportMapView showExact:", showExact, "post.id:", post.id);
     if (!isLoaded) return;
-    if (!containerRef.current || mapRef.current) return;
+    if (!containerRef.current) return;
+
+    // 이전 지도 완전히 제거 후 재생성
+    if (mapRef.current) {
+      containerRef.current.innerHTML = "";
+      mapRef.current = null;
+    }
 
     const { kakao } = window;
 
