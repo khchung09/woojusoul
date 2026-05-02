@@ -1,20 +1,22 @@
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { cacheLife } from "next/cache";
+import { unstable_cache } from "next/cache";
 import Link from "next/link";
 import type { PostWithAuthor } from "@/types/models";
 import PostCard from "@/components/PostCard";
 
-// 공개 posts 목록 — 30초 캐시 (사용자 무관 데이터)
-async function getCachedPosts(): Promise<PostWithAuthor[] | null> {
-  "use cache";
-  cacheLife("seconds");
-  const { data } = await createServiceClient()
-    .from("posts")
-    .select(`*, profiles(username, avatar_url, is_blinded)`)
-    .order("created_at", { ascending: false })
-    .limit(20);
-  return data as PostWithAuthor[] | null;
-}
+// 공개 posts 목록 — 30초 캐시, "feed" 태그로 새 글 작성 시 무효화 가능
+const getCachedPosts = unstable_cache(
+  async (): Promise<PostWithAuthor[] | null> => {
+    const { data } = await createServiceClient()
+      .from("posts")
+      .select(`*, profiles(username, avatar_url, is_blinded)`)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    return data as PostWithAuthor[] | null;
+  },
+  ["feed-posts"],
+  { revalidate: 30, tags: ["feed"] }
+);
 
 export default async function FeedPage() {
   const supabase = await createClient();

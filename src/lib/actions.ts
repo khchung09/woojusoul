@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -390,6 +390,7 @@ export async function createPost(postData: {
 
   await sendMentionNotifications(supabase, postData.content, user.id, data.id);
 
+  revalidateTag("feed");
   revalidatePath("/feed");
   revalidatePath("/profile");
   return {};
@@ -420,6 +421,7 @@ export async function deletePost(postId: string, imageUrl: string | null): Promi
 
   if (error) throw new Error(error.message);
 
+  revalidateTag("feed");
   revalidatePath("/feed");
   revalidatePath("/profile");
 }

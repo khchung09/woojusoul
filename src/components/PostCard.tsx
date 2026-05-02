@@ -19,6 +19,7 @@ import ReportModal from "@/components/ReportModal";
 import ApplicationModal from "@/components/ApplicationModal";
 import { MentionText } from "@/components/MentionText";
 import { MiniMap } from "@/components/MiniMap";
+import Image from "next/image";
 
 type PostType = "general" | "report" | "temp_protect" | "adoption";
 
@@ -81,12 +82,12 @@ function parseImageUrls(imageUrl: string | null): string[] {
 function AuthorAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string | null }) {
   if (avatarUrl) {
     return (
-      <img
+      <Image
         src={avatarUrl}
         alt={name}
+        width={40}
+        height={40}
         style={{
-          width: "40px",
-          height: "40px",
           borderRadius: "100px",
           objectFit: "cover",
           flexShrink: 0,
@@ -572,20 +573,26 @@ export default function PostCard({
 
           {/* 이미지 */}
           {imageUrls.length === 1 && (
-            <img
-              src={imageUrls[0]}
-              alt="게시물 이미지"
-              style={{ marginTop: "14px", width: "100%", borderRadius: "var(--r-md)", objectFit: "cover", maxHeight: "280px" }}
-            />
+            <div style={{ position: "relative", marginTop: "14px", width: "100%", aspectRatio: "16/9", borderRadius: "var(--r-md)", overflow: "hidden" }}>
+              <Image
+                src={imageUrls[0]}
+                alt="게시물 이미지"
+                fill
+                style={{ objectFit: "cover" }}
+                sizes="(max-width: 768px) 100vw, 600px"
+              />
+            </div>
           )}
           {imageUrls.length >= 2 && (
             <div style={{ marginTop: "14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
               {imageUrls.slice(0, 4).map((url, i) => (
-                <div key={i} style={{ position: "relative", aspectRatio: "1" }}>
-                  <img
+                <div key={i} style={{ position: "relative", aspectRatio: "1", borderRadius: "var(--r-md)", overflow: "hidden" }}>
+                  <Image
                     src={url}
                     alt={`이미지 ${i + 1}`}
-                    style={{ width: "100%", height: "100%", borderRadius: "var(--r-md)", objectFit: "cover" }}
+                    fill
+                    style={{ objectFit: "cover" }}
+                    sizes="(max-width: 768px) 50vw, 300px"
                   />
                   {i === 3 && imageUrls.length > 4 && (
                     <div

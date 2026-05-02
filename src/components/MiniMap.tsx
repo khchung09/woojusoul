@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useKakaoMaps } from "@/hooks/useKakaoMaps";
 import { Loader2 } from "lucide-react";
@@ -14,12 +14,34 @@ interface Props {
 
 export function MiniMap({ lat, lng, showExact, postId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<KakaoMap | null>(null);
   const isLoaded = useKakaoMaps();
   const router = useRouter();
+  const [isVisible, setIsVisible] = useState(false);
+
+  // 뷰포트 진입 감지 — 한번 보이면 계속 유지
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "100px" }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!isLoaded) return;
+    if (!isVisible) return;
     if (!containerRef.current) return;
 
     const { kakao } = window;
@@ -63,10 +85,11 @@ export function MiniMap({ lat, lng, showExact, postId }: Props) {
         map,
       });
     }
-  }, [isLoaded, lat, lng, showExact]);
+  }, [isLoaded, isVisible, lat, lng, showExact]);
 
   return (
     <div
+      ref={wrapperRef}
       style={{
         position: "relative",
         height: "160px",
@@ -77,8 +100,17 @@ export function MiniMap({ lat, lng, showExact, postId }: Props) {
         background: "var(--surface-2)",
       }}
     >
+      {/* 뷰포트 밖 — 스켈레톤 */}
+      {!isVisible && (
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          background: "var(--surface-2)",
+        }} />
+      )}
+
       {/* SDK 로딩 중 스피너 */}
-      {!isLoaded && (
+      {isVisible && !isLoaded && (
         <div style={{
           position: "absolute",
           inset: 0,
