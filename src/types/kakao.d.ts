@@ -30,6 +30,7 @@ interface KakaoMaps {
   };
   services: {
     Geocoder: new () => KakaoGeocoder;
+    Places: new () => KakaoPlaces;
     Status: { OK: string; ZERO_RESULT: string; ERROR: string };
   };
 }
@@ -67,6 +68,22 @@ interface KakaoInfoWindow {
 
 interface KakaoCustomOverlay {
   setMap(map: KakaoMap | null): void;
+}
+
+interface KakaoPlaceResult {
+  id: string;
+  place_name: string;
+  address_name: string;
+  road_address_name: string;
+  x: string; // lng
+  y: string; // lat
+}
+
+interface KakaoPlaces {
+  keywordSearch(
+    keyword: string,
+    callback: (result: KakaoPlaceResult[], status: string) => void
+  ): void;
 }
 
 interface KakaoGeocoder {

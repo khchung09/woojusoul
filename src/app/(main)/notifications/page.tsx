@@ -1,7 +1,26 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { unstable_cache } from "next/cache";
 import type { NotificationWithActor } from "@/types/models";
 import NotificationList from "./NotificationList";
+
+const getCachedNotifications = unstable_cache(
+  async (userId: string): Promise<NotificationWithActor[]> => {
+    const { data } = await createServiceClient()
+      .from("notifications")
+      .select(`
+        *,
+        actor:profiles!actor_id(username, avatar_url),
+        post:posts(id, content, post_type)
+      `)
+      .eq("recipient_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    return (data as NotificationWithActor[]) ?? [];
+  },
+  ["notifications"],
+  { revalidate: 10, tags: ["notifications"] }
+);
 
 export default async function NotificationsPage() {
   const supabase = await createClient();
@@ -12,18 +31,7 @@ export default async function NotificationsPage() {
 
   if (!user) redirect("/login");
 
-  const { data } = await supabase
-    .from("notifications")
-    .select(`
-      *,
-      actor:profiles!actor_id(username, avatar_url),
-      post:posts(id, content, post_type)
-    `)
-    .eq("recipient_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  const notifications = (data as NotificationWithActor[]) ?? [];
+  const notifications = await getCachedNotifications(user.id);
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (

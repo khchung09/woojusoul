@@ -181,12 +181,11 @@ export function Navbar({ isAdmin = false }: { isAdmin?: boolean }) {
                   gap: "10px",
                   padding: "10px 16px",
                   borderRadius: "var(--r-md)",
-                  background: "var(--accent)",
-                  color: "white",
-                  fontWeight: 700,
+                  background: active ? "#EEF4E8" : "transparent",
+                  color: active ? "#2D5016" : "var(--text-secondary)",
+                  fontWeight: active ? 700 : 500,
                   fontSize: "14px",
                   textDecoration: "none",
-                  margin: "4px 0",
                   transition: "all 0.15s ease",
                 }}
                 onMouseDown={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(0.96)"; }}

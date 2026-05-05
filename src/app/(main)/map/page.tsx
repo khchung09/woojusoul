@@ -103,13 +103,20 @@ export default async function MapPage({
   }
 
   const post = postData as ReportPost;
-  const isOwn = user?.id === post.author_id;
 
-  // 정확한 위치 표시 여부 결정
-  let showExact = !!(isAdmin || isOwn);
-  if (!showExact && user && focusPostId) {
-    const serviceClient = createServiceClient();
-    const { data: approvalData, error } = await serviceClient
+  // 1. 기본값 false
+  let showExact = false;
+
+  // 2. isAdmin 체크
+  if (isAdmin) showExact = true;
+
+  // 3. isOwn 체크 (user.id, post.author_id 모두 string)
+  const isOwn = user?.id === post.author_id;
+  if (isOwn) showExact = true;
+
+  // 4. approved 체크 — isAdmin / isOwn 둘 다 false일 때만
+  if (!showExact && user?.id) {
+    const { data, error } = await createServiceClient()
       .from("location_requests")
       .select("id")
       .eq("post_id", focusPostId)
@@ -117,11 +124,23 @@ export default async function MapPage({
       .eq("status", "approved")
       .maybeSingle();
 
-    console.log("approvalData:", approvalData, "error:", error);
-    showExact = !!approvalData;
+    console.log("approved check:", {
+      data,
+      error,
+      post_id: focusPostId,
+      requester_id: user.id,
+    });
+
+    if (data && !error) showExact = true;
   }
 
-  console.log("최종 showExact:", showExact);
+  console.log("최종 결과:", {
+    showExact,
+    isAdmin,
+    isOwn,
+    userId: user?.id,
+    authorId: post.author_id,
+  });
 
   return (
     <div className="flex flex-col gap-4">

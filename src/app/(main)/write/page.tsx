@@ -10,6 +10,7 @@ import { updatePost, createPost } from "@/lib/actions";
 import { MentionInput } from "@/components/MentionInput";
 
 type PostType = "general" | "report" | "temp_protect" | "adoption";
+type ReportType = "abandoned" | "abuse";
 type AnimalSpecies = "cat" | "dog" | "other";
 type AnimalStatus = "rescue_needed" | "protected" | "rescued";
 type Gender = "male" | "female" | "unknown";
@@ -53,6 +54,11 @@ const NEUTERED_OPTIONS: { value: NeuteredStatus; label: string }[] = [
   { value: "yes", label: "완료" },
   { value: "no", label: "미완료" },
   { value: "unknown", label: "모름" },
+];
+
+const REPORT_TYPE_OPTIONS: { value: ReportType; label: string; emoji: string }[] = [
+  { value: "abandoned", label: "유기동물을 발견했어요", emoji: "🐾" },
+  { value: "abuse", label: "학대 제보", emoji: "🚨" },
 ];
 
 const REPORT_STATUS_OPTIONS: { value: AnimalStatus; label: string; color: string; bg: string }[] = [
@@ -176,6 +182,7 @@ function WritePageContent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [postType, setPostType] = useState<PostType>("general");
+  const [reportType, setReportType] = useState<ReportType | null>(null);
   const [content, setContent] = useState("");
   const [locationData, setLocationData] = useState<LocationData | null>(null);
   const [reportSpecies, setReportSpecies] = useState<AnimalSpecies>("dog");
@@ -195,49 +202,55 @@ function WritePageContent() {
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
   const [removedImageUrls, setRemovedImageUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(isEditMode);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!editPostId) return;
     async function loadPost() {
-      const supabase = createClient();
-      const { data: post } = await supabase.from("posts").select("*").eq("id", editPostId!).single();
-      if (!post) return;
-      setPostType(post.post_type);
-      if (post.post_type === "temp_protect" || post.post_type === "adoption") {
-        try {
-          const parsed = JSON.parse(post.content) as Record<string, string>;
-          if (parsed._postFormat) {
-            setAnimalSpecies((parsed.species as AnimalSpecies) ?? "dog");
-            setAnimalName(parsed.name ?? "");
-            setAnimalAge(parsed.age ?? "");
-            setAnimalGender((parsed.gender as Gender) ?? "unknown");
-            setHealthStatus((parsed.health as HealthStatus) ?? "good");
-            setPersonality(parsed.personality ?? "");
-            if (post.post_type === "temp_protect") {
-              setAvailablePeriod(parsed.period ?? "");
+      try {
+        const supabase = createClient();
+        const { data: post } = await supabase.from("posts").select("*").eq("id", editPostId!).single();
+        if (!post) return;
+        setPostType(post.post_type);
+        if (post.post_type === "temp_protect" || post.post_type === "adoption") {
+          try {
+            const parsed = JSON.parse(post.content) as Record<string, string>;
+            if (parsed._postFormat) {
+              setAnimalSpecies((parsed.species as AnimalSpecies) ?? "dog");
+              setAnimalName(parsed.name ?? "");
+              setAnimalAge(parsed.age ?? "");
+              setAnimalGender((parsed.gender as Gender) ?? "unknown");
+              setHealthStatus((parsed.health as HealthStatus) ?? "good");
+              setPersonality(parsed.personality ?? "");
+              if (post.post_type === "temp_protect") {
+                setAvailablePeriod(parsed.period ?? "");
+              } else {
+                setNeuteredStatus((parsed.neutered as NeuteredStatus) ?? "unknown");
+                setAdoptionConditions(parsed.conditions ?? "");
+              }
+              setDescription(parsed.description ?? "");
             } else {
-              setNeuteredStatus((parsed.neutered as NeuteredStatus) ?? "unknown");
-              setAdoptionConditions(parsed.conditions ?? "");
+              setDescription(post.content);
             }
-            setDescription(parsed.description ?? "");
-          } else {
+          } catch {
             setDescription(post.content);
           }
-        } catch {
-          setDescription(post.content);
-        }
-      } else {
-        setContent(post.content);
-        if (post.post_type === "report") {
-          setReportSpecies((post.animal_type as AnimalSpecies) ?? "dog");
-          setReportStatus((post.animal_status as AnimalStatus) ?? "rescue_needed");
-          if (post.location) {
-            setLocationData({ location: post.location, locationAddress: post.location_address ?? "", lat: post.latitude ?? 0, lng: post.longitude ?? 0 });
+        } else {
+          setContent(post.content);
+          if (post.post_type === "report") {
+            setReportType((post.report_type as ReportType) ?? null);
+            setReportSpecies((post.animal_type as AnimalSpecies) ?? "dog");
+            setReportStatus((post.animal_status as AnimalStatus) ?? "rescue_needed");
+            if (post.location) {
+              setLocationData({ location: post.location, locationAddress: post.location_address ?? "", lat: post.latitude ?? 0, lng: post.longitude ?? 0 });
+            }
           }
         }
+        setExistingImageUrls(parseImageUrls(post.image_url));
+      } finally {
+        setDataLoading(false);
       }
-      setExistingImageUrls(parseImageUrls(post.image_url));
     }
     loadPost();
   }, [editPostId]);
@@ -250,7 +263,7 @@ function WritePageContent() {
   const contentLimit = CONTENT_LIMIT[postType];
   const contentOver = activeContent.length > contentLimit;
   const totalImages = existingImageUrls.length + imageFiles.length;
-  const canSubmit = !loading && !contentOver && (isComplex || activeContent.trim().length > 0);
+  const canSubmit = !loading && !contentOver && (isComplex || activeContent.trim().length > 0) && (!isReport || !!reportType);
 
   function handleFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -326,10 +339,12 @@ function WritePageContent() {
         longitude: isReport ? (locationData?.lng ?? null) : null,
         animal_type: isReport ? reportSpecies : isComplex ? animalSpecies : null,
         animal_status: isReport ? reportStatus : null,
+        report_type: isReport ? reportType : null,
       } as const;
 
       if (isEditMode && editPostId) {
         await updatePost(editPostId, postData, removedImageUrls);
+        setLoading(false);
         router.back();
       } else {
         const result = await createPost(postData);
@@ -393,7 +408,7 @@ function WritePageContent() {
           type="submit"
           form="write-form"
           size="sm"
-          loading={loading}
+          loading={loading || dataLoading}
           disabled={!canSubmit}
           style={{ minWidth: "72px" }}
         >
@@ -450,6 +465,53 @@ function WritePageContent() {
               </button>
             );
           })}
+        </div>
+
+        {/* 제보 하위 카테고리 */}
+        <div
+          style={{
+            maxHeight: isReport ? "120px" : "0",
+            opacity: isReport ? 1 : 0,
+            marginTop: isReport ? "0" : "-16px",
+            overflow: "hidden",
+            transition: "max-height 0.25s ease, opacity 0.2s ease, margin-top 0.25s ease",
+          }}
+        >
+          <div style={{ display: "flex", gap: "8px" }}>
+            {REPORT_TYPE_OPTIONS.map((opt) => {
+              const active = reportType === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setReportType(opt.value)}
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                    borderRadius: "var(--r-lg)",
+                    border: `2px solid ${active ? "var(--danger)" : "var(--border)"}`,
+                    background: active ? "var(--danger-bg)" : "var(--surface)",
+                    color: active ? "var(--danger)" : "var(--text-secondary)",
+                    padding: "12px 14px",
+                    fontSize: "13px",
+                    fontWeight: active ? 700 : 500,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseDown={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(0.96)"; }}
+                  onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+                >
+                  <span style={{ fontSize: "16px" }}>{opt.emoji}</span>
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* 제보 폼 */}

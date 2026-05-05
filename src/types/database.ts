@@ -94,6 +94,7 @@ export interface Database {
           longitude: number | null;
           animal_type: "cat" | "dog" | "other" | null;
           animal_status: "rescue_needed" | "protected" | "rescued" | null;
+          report_type: "abandoned" | "abuse" | null;
           likes_count: number;
           comments_count: number;
           report_count: number;
@@ -112,6 +113,7 @@ export interface Database {
           longitude?: number | null;
           animal_type?: "cat" | "dog" | "other" | null;
           animal_status?: "rescue_needed" | "protected" | "rescued" | null;
+          report_type?: "abandoned" | "abuse" | null;
           likes_count?: number;
           comments_count?: number;
           created_at?: string;
@@ -127,6 +129,7 @@ export interface Database {
           longitude?: number | null;
           animal_type?: "cat" | "dog" | "other" | null;
           animal_status?: "rescue_needed" | "protected" | "rescued" | null;
+          report_type?: "abandoned" | "abuse" | null;
           likes_count?: number;
           comments_count?: number;
           updated_at?: string;

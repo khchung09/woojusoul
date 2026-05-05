@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useTransition, useRef } from "react";
 import { Search, X } from "lucide-react";
 import PostCard from "@/components/PostCard";
 import type { PostWithAuthor } from "@/types/models";
@@ -53,17 +53,33 @@ export default function SearchClient({
 }: SearchClientProps) {
   const router = useRouter();
   const [q, setQ] = useState(initialQ);
+  const [isPending, startTransition] = useTransition();
+
+  // 서버 재렌더 시 입력창 동기화
+  useEffect(() => { setQ(initialQ); }, [initialQ]);
 
   function navigate(overrides: Partial<{ q: string; type: PostTypeKey; mode: Mode }>) {
-    const nextQ = overrides.q ?? q;
+    const nextQ = overrides.q !== undefined ? overrides.q : q;
     const nextMode = overrides.mode ?? initialMode;
     const nextType = overrides.type ?? initialType;
     const params = new URLSearchParams();
     if (nextQ.trim()) params.set("q", nextQ.trim());
     params.set("mode", nextMode);
     if (nextMode === "posts" && nextType !== "all") params.set("type", nextType);
-    router.push(`/search?${params.toString()}`);
+    startTransition(() => { router.push(`/search?${params.toString()}`); });
   }
+
+  // navigate 최신 참조 유지 (debounce useEffect에서 stale closure 방지)
+  const navigateRef = useRef(navigate);
+  useEffect(() => { navigateRef.current = navigate; });
+
+  // 300ms debounce 자동검색
+  useEffect(() => {
+    const trimmed = q.trim();
+    if (trimmed === initialQ.trim()) return;
+    const timer = setTimeout(() => { navigateRef.current({ q: trimmed }); }, 300);
+    return () => clearTimeout(timer);
+  }, [q, initialQ]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -216,7 +232,17 @@ export default function SearchClient({
       </div>{/* /sticky header */}
 
       {/* 결과 영역 */}
-      {!hasQuery ? (
+      {isPending ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="animate-pulse"
+              style={{ height: "120px", borderRadius: "var(--r-lg)", background: "var(--surface-2)" }}
+            />
+          ))}
+        </div>
+      ) : !hasQuery ? (
         <div
           style={{
             display: "flex",

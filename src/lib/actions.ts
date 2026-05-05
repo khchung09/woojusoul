@@ -181,6 +181,7 @@ export async function updatePost(
     longitude: number | null;
     animal_type: "cat" | "dog" | "other" | null;
     animal_status: "rescue_needed" | "protected" | "rescued" | null;
+    report_type: "abandoned" | "abuse" | null;
   },
   removedImageUrls: string[]
 ): Promise<void> {
@@ -373,6 +374,7 @@ export async function createPost(postData: {
   longitude: number | null;
   animal_type: "cat" | "dog" | "other" | null;
   animal_status: "rescue_needed" | "protected" | "rescued" | null;
+  report_type: "abandoned" | "abuse" | null;
 }): Promise<{ error?: string }> {
   const supabase = await createClient();
   const {

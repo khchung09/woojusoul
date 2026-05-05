@@ -11,6 +11,7 @@ import {
   Trash2,
   Flag,
   ShieldAlert,
+  Share2,
 } from "lucide-react";
 import { formatDistanceToNow } from "@/lib/dateUtils";
 import { deletePost, toggleLike, requestLocationAccess } from "@/lib/actions";
@@ -239,12 +240,18 @@ export default function PostCard({
   const router = useRouter();
 
   const postType = (post.post_type ?? "general") as PostType;
-  const badge = TYPE_CONFIG[postType];
+  const badge = (() => {
+    const base = TYPE_CONFIG[postType];
+    if (postType !== "report" || !base) return base;
+    if (post.report_type === "abandoned") return { ...base, label: "유기동물", emoji: "🐾" };
+    if (post.report_type === "abuse") return { ...base, label: "학대제보", emoji: "🚨" };
+    return base;
+  })();
   const authorName = post.profiles?.username ?? "알 수 없음";
   const statusBadge = post.animal_status ? ANIMAL_STATUS_BADGE[post.animal_status] : null;
   const imageUrls = parseImageUrls(post.image_url);
   const isOwn = !!currentUserId && currentUserId === post.author_id;
-  console.log("locStatus:", locStatus, "showExact:", isAdmin || isOwn || locStatus === "approved");
+  console.log("isOwn:", isOwn, "currentUserId:", currentUserId, "author_id:", post.author_id);
   const isBlinded = ((post.report_count ?? 0) >= 5 || post.profiles?.is_blinded === true) && !isOwn;
   // 작성자·관리자·승인된 열람 요청자만 정확한 위치 표시
   const canSeeExactLocation = isAdmin || isOwn || locStatus === "approved";
@@ -302,6 +309,32 @@ export default function PostCard({
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(""), 3000);
+  }
+
+  async function handleShare(e: React.MouseEvent) {
+    e.stopPropagation();
+    const url = `${window.location.origin}/posts/${post.id}`;
+    let plainText = post.content;
+    try {
+      const parsed = JSON.parse(post.content) as Record<string, string>;
+      if (parsed.description) plainText = parsed.description;
+    } catch { /* plain text */ }
+
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ title: `@${authorName}`, text: plainText.slice(0, 50), url });
+        return;
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast("링크가 복사됐어요 🔗");
+    } catch {
+      showToast("링크 복사에 실패했어요");
+    }
   }
 
   function handleLocationRequest(e: React.MouseEvent) {
@@ -573,13 +606,14 @@ export default function PostCard({
 
           {/* 이미지 */}
           {imageUrls.length === 1 && (
-            <div style={{ position: "relative", marginTop: "14px", width: "100%", aspectRatio: "16/9", borderRadius: "var(--r-md)", overflow: "hidden" }}>
+            <div style={{ marginTop: "14px", borderRadius: "var(--r-md)", overflow: "hidden" }}>
               <Image
                 src={imageUrls[0]}
                 alt="게시물 이미지"
-                fill
-                style={{ objectFit: "cover" }}
+                width={800}
+                height={280}
                 sizes="(max-width: 768px) 100vw, 600px"
+                style={{ objectFit: "cover", width: "100%", height: "280px" }}
               />
             </div>
           )}
@@ -619,12 +653,17 @@ export default function PostCard({
 
           {/* 미니 지도 — report 타입 + 위도/경도 있을 때만 */}
           {postType === "report" && post.latitude != null && post.longitude != null && (
-            <MiniMap
-              lat={post.latitude}
-              lng={post.longitude}
-              showExact={isAdmin || isOwn || locStatus === "approved"}
-              postId={post.id}
-            />
+            <div style={{ marginTop: "14px", paddingTop: "14px", borderTop: "1.5px solid var(--surface-2)" }}>
+              <p style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600, margin: "0 0 6px" }}>
+                📍 발견 위치
+              </p>
+              <MiniMap
+                lat={post.latitude}
+                lng={post.longitude}
+                showExact={isAdmin || isOwn || locStatus === "approved"}
+                postId={post.id}
+              />
+            </div>
           )}
 
           {/* 좋아요 / 댓글 */}
@@ -689,6 +728,27 @@ export default function PostCard({
             >
               <MessageCircle size={16} />
               <span>{post.comments_count}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleShare}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                fontSize: "13px",
+                fontWeight: 500,
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--text-muted)",
+                padding: 0,
+                fontFamily: "inherit",
+              }}
+              aria-label="공유하기"
+            >
+              <Share2 size={16} />
             </button>
 
             {(postType === "temp_protect" || postType === "adoption") && !isOwn && currentUserId && (
