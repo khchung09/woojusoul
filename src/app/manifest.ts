@@ -6,9 +6,11 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "우주소울",
     description: "유기동물과 사람을 잇는 따뜻한 커뮤니티",
     start_url: "/feed",
+    scope: "/",
     display: "standalone",
     orientation: "portrait",
-    theme_color: "#6B7C3A",
+    lang: "ko",
+    theme_color: "#2D5016",
     background_color: "#F8F4ED",
     icons: [
       {
