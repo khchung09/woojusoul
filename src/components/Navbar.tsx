@@ -123,19 +123,19 @@ export function Navbar({ isAdmin = false }: { isAdmin?: boolean }) {
               width: "52px",
               height: "52px",
               borderRadius: "16px",
-              background: "var(--accent)",
+              background: "#4A7C2F",
               color: "white",
               textDecoration: "none",
-              transform: "translateY(-6px)",
-              boxShadow: "0 4px 12px rgba(45,80,22,0.35)",
+              transform: "translateY(0px)",
+              boxShadow: "0 4px 12px rgba(74,124,47,0.35)",
               flexShrink: 0,
               transition: "all 0.15s ease",
             }}
-            onMouseDown={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-6px) scale(0.92)"; }}
-            onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-6px) scale(1)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-6px) scale(1)"; }}
-            onTouchStart={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-6px) scale(0.92)"; }}
-            onTouchEnd={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-6px) scale(1)"; }}
+            onMouseDown={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0px) scale(0.92)"; }}
+            onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0px) scale(1)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0px) scale(1)"; }}
+            onTouchStart={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0px) scale(0.92)"; }}
+            onTouchEnd={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0px) scale(1)"; }}
           >
             <PenLine size={22} />
           </Link>

@@ -14,7 +14,9 @@
       "Bash(node -e \"const t = require\\('C:/Users/chung/paw-app/node_modules/next/dist/server/web/spec-extension/revalidate-tag.js'\\); console.log\\(Object.keys\\(t\\)\\)\")",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(npm run *)",
+      "PowerShell(Stop-Process *)"
     ]
   }
 }
