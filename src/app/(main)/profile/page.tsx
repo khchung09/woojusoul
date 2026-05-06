@@ -38,6 +38,17 @@ export default async function ProfilePage() {
   const { data: likesData } = await supabase.from("likes").select("post_id").eq("user_id", user.id);
   const likedPostIds = new Set(likesData?.map((l) => l.post_id) ?? []);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: bookmarksRaw } = await (supabase.from("bookmarks" as any) as any)
+    .select(`post_id, posts(*, profiles(username, avatar_url, is_blinded))`)
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+  const bookmarksData = (bookmarksRaw ?? []) as { post_id: string; posts: PostWithAuthor | null }[];
+  const bookmarkedPostIdSet = new Set(bookmarksData.map((b) => b.post_id));
+  const bookmarkedPosts = bookmarksData
+    .map((b) => b.posts)
+    .filter((p): p is PostWithAuthor => p !== null);
+
   // post_id 단위로 현재 유저의 위치 열람 신청 상태 조회
   const { data: locRequestsData } = await supabase
     .from("location_requests")
@@ -179,6 +190,57 @@ export default async function ProfilePage() {
             isAdmin={profile.role === "admin"}
             currentUserId={user.id}
             initialLiked={likedPostIds.has(post.id)}
+            initialBookmarked={bookmarkedPostIdSet.has(post.id)}
+            initialLocationRequest={locRequestMap.get(post.id) ?? null}
+          />
+        ))}
+      </div>
+    );
+
+  const bookmarksContent =
+    bookmarkedPosts.length === 0 ? (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "48px 0",
+          gap: "10px",
+        }}
+      >
+        <div
+          style={{
+            width: "64px",
+            height: "64px",
+            borderRadius: "100px",
+            background: "var(--accent-bg)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "28px",
+          }}
+        >
+          🔖
+        </div>
+        <p style={{ fontSize: "15px", fontWeight: 600, color: "var(--text-secondary)", margin: 0 }}>
+          저장한 게시물이 없어요
+        </p>
+        <p style={{ fontSize: "13px", color: "var(--text-muted)", margin: 0 }}>
+          마음에 드는 게시물을 북마크해보세요
+        </p>
+      </div>
+    ) : (
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        {bookmarkedPosts.map((post) => (
+          <PostCard
+            key={post.id}
+            post={post}
+            isVerified={profile.is_verified}
+            isAdmin={profile.role === "admin"}
+            currentUserId={user.id}
+            initialLiked={likedPostIds.has(post.id)}
+            initialBookmarked={true}
             initialLocationRequest={locRequestMap.get(post.id) ?? null}
           />
         ))}
@@ -200,7 +262,11 @@ export default async function ProfilePage() {
         initialRealName={profile.real_name ?? null}
         initialPhone={profile.phone ?? null}
       />
-      <ProfileTabs petsContent={petsContent} postsContent={postsContent} />
+      <ProfileTabs
+        postsContent={postsContent}
+        bookmarksContent={bookmarksContent}
+        petsContent={petsContent}
+      />
     </div>
   );
 }

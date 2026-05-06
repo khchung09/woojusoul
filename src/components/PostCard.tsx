@@ -12,9 +12,10 @@ import {
   Flag,
   ShieldAlert,
   Share2,
+  Bookmark,
 } from "lucide-react";
 import { formatDistanceToNow } from "@/lib/dateUtils";
-import { deletePost, toggleLike, requestLocationAccess } from "@/lib/actions";
+import { deletePost, toggleLike, requestLocationAccess, toggleBookmark } from "@/lib/actions";
 import type { PostWithAuthor } from "@/types/models";
 import ReportModal from "@/components/ReportModal";
 import ApplicationModal from "@/components/ApplicationModal";
@@ -211,6 +212,7 @@ type Props = {
   isAdmin?: boolean;
   currentUserId?: string | null;
   initialLiked?: boolean;
+  initialBookmarked?: boolean;
   disableLink?: boolean;
   initialLocationRequest?: LocationRequestStatus | null;
 };
@@ -221,6 +223,7 @@ export default function PostCard({
   isAdmin = false,
   currentUserId,
   initialLiked = false,
+  initialBookmarked = false,
   disableLink = false,
   initialLocationRequest = null,
 }: Props) {
@@ -232,6 +235,8 @@ export default function PostCard({
   const [liked, setLiked] = useState(initialLiked);
   const [likesCount, setLikesCount] = useState(post.likes_count);
   const [liking, startLikeTransition] = useTransition();
+  const [bookmarked, setBookmarked] = useState(initialBookmarked);
+  const [bookmarking, startBookmarkTransition] = useTransition();
   const [locStatus, setLocStatus] = useState<LocationRequestStatus | null>(initialLocationRequest);
   const [locRequesting, startLocTransition] = useTransition();
   const [toast, setToast] = useState("");
@@ -304,6 +309,13 @@ export default function PostCard({
     setLiked(newLiked);
     setLikesCount((c) => (newLiked ? c + 1 : Math.max(0, c - 1)));
     startLikeTransition(async () => { await toggleLike(post.id); });
+  }
+
+  function handleBookmark(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!currentUserId) { router.push("/login"); return; }
+    setBookmarked((v) => !v);
+    startBookmarkTransition(async () => { await toggleBookmark(post.id); });
   }
 
   function showToast(msg: string) {
@@ -749,6 +761,35 @@ export default function PostCard({
               aria-label="공유하기"
             >
               <Share2 size={16} />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleBookmark}
+              disabled={bookmarking}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                fontSize: "13px",
+                fontWeight: 500,
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: bookmarked ? "var(--accent)" : "var(--text-muted)",
+                padding: 0,
+                fontFamily: "inherit",
+                transition: "color 0.15s ease, transform 0.12s ease",
+              }}
+              onMouseDown={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(0.9)"; }}
+              onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+              aria-label="북마크"
+            >
+              <Bookmark
+                size={16}
+                style={{ fill: bookmarked ? "var(--accent)" : "none", transition: "fill 0.15s ease" }}
+              />
             </button>
 
             {(postType === "temp_protect" || postType === "adoption") && !isOwn && currentUserId && (

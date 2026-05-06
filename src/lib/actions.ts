@@ -428,6 +428,26 @@ export async function deletePost(postId: string, imageUrl: string | null): Promi
   revalidatePath("/profile");
 }
 
+export async function toggleBookmark(postId: string): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("로그인이 필요합니다");
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const bm = supabase.from("bookmarks" as any);
+  const { data: existing } = await bm.select("id").eq("post_id", postId).eq("user_id", user.id).maybeSingle();
+
+  if (existing) {
+    await bm.delete().eq("id", (existing as unknown as { id: string }).id);
+  } else {
+    await bm.insert({ post_id: postId, user_id: user.id });
+  }
+
+  revalidatePath("/profile");
+}
+
 export async function requestLocationAccess(
   postId: string,
   ownerId: string

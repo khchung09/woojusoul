@@ -2,13 +2,22 @@
 
 import { useState, type ReactNode } from "react";
 
+type Tab = "posts" | "bookmarks" | "pets";
+
 type Props = {
-  petsContent: ReactNode;
   postsContent: ReactNode;
+  bookmarksContent: ReactNode;
+  petsContent: ReactNode;
 };
 
-export default function ProfileTabs({ petsContent, postsContent }: Props) {
-  const [tab, setTab] = useState<"posts" | "pets">("posts");
+const TAB_LABELS: Record<Tab, string> = {
+  posts: "내 게시물",
+  bookmarks: "북마크",
+  pets: "내 반려동물",
+};
+
+export default function ProfileTabs({ postsContent, bookmarksContent, petsContent }: Props) {
+  const [tab, setTab] = useState<Tab>("posts");
 
   return (
     <div>
@@ -20,7 +29,7 @@ export default function ProfileTabs({ petsContent, postsContent }: Props) {
           marginBottom: "16px",
         }}
       >
-        {(["posts", "pets"] as const).map((t) => {
+        {(["posts", "bookmarks", "pets"] as Tab[]).map((t) => {
           const active = tab === t;
           return (
             <button
@@ -45,18 +54,15 @@ export default function ProfileTabs({ petsContent, postsContent }: Props) {
               onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
             >
-              {t === "posts" ? "내 게시물" : "내 반려동물"}
+              {TAB_LABELS[t]}
             </button>
           );
         })}
       </div>
 
       {/* 탭 콘텐츠 */}
-      <div
-        key={tab}
-        style={{ animation: "fadeIn 0.2s ease forwards" }}
-      >
-        {tab === "posts" ? postsContent : petsContent}
+      <div key={tab} style={{ animation: "fadeIn 0.2s ease forwards" }}>
+        {tab === "posts" ? postsContent : tab === "bookmarks" ? bookmarksContent : petsContent}
       </div>
     </div>
   );
