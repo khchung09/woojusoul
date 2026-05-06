@@ -11,9 +11,7 @@ const nextConfig: NextConfig = {
     ],
   },
   allowedDevOrigins: ["192.168.219.100"],
-  experimental: {
-    cacheComponents: true,
-  },
+  cacheComponents: true,
   async headers() {
     return [
       {

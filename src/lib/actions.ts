@@ -392,7 +392,7 @@ export async function createPost(postData: {
 
   await sendMentionNotifications(supabase, postData.content, user.id, data.id);
 
-  revalidateTag("feed");
+  revalidateTag("feed", "max");
   revalidatePath("/feed");
   revalidatePath("/profile");
   return {};
@@ -423,7 +423,7 @@ export async function deletePost(postId: string, imageUrl: string | null): Promi
 
   if (error) throw new Error(error.message);
 
-  revalidateTag("feed");
+  revalidateTag("feed", "max");
   revalidatePath("/feed");
   revalidatePath("/profile");
 }

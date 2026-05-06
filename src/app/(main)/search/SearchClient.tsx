@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState, useEffect, useTransition, useRef } from "react";
-import { Search, X } from "lucide-react";
+import { Search, X, Map } from "lucide-react";
 import PostCard from "@/components/PostCard";
 import type { PostWithAuthor } from "@/types/models";
 import type { UserResult } from "./page";
@@ -107,9 +108,36 @@ export default function SearchClient({
           gap: "12px",
         }}
       >
-        <div>
-          <h1 style={{ fontSize: "22px", fontWeight: 800, color: "var(--text-primary)", margin: "0 0 2px" }}>검색</h1>
-          <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0 }}>게시물, 동네, 유저를 검색해보세요</p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <h1 style={{ fontSize: "22px", fontWeight: 800, color: "var(--text-primary)", margin: "0 0 2px" }}>검색</h1>
+            <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0 }}>게시물, 동네, 유저를 검색해보세요</p>
+          </div>
+          <Link
+            href="/map"
+            className="md:hidden"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "8px 14px",
+              borderRadius: "var(--r-pill)",
+              background: "var(--accent-bg)",
+              color: "var(--accent)",
+              fontSize: "13px",
+              fontWeight: 600,
+              textDecoration: "none",
+              border: "1.5px solid var(--accent)",
+              flexShrink: 0,
+              transition: "all 0.15s ease",
+            }}
+            onMouseDown={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(0.94)"; }}
+            onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
+          >
+            <Map size={14} />
+            지도로 보기
+          </Link>
         </div>
 
       {/* 검색 입력 */}

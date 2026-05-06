@@ -2,15 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Search, User, Map, ShieldCheck, LogOut } from "lucide-react";
+import { Home, Search, User, Map, ShieldCheck, LogOut, PenLine } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { createClient } from "@/lib/supabase/client";
 
-// 모바일 하단탭: 피드 / 검색 / 지도 / 알림 / 프로필 (FAB 빼고 5개)
+// 모바일 하단탭: 피드 / 검색 / FAB / 알림 / 프로필
 const MOBILE_TABS = [
   { href: "/feed",    label: "피드",  icon: Home   },
   { href: "/search",  label: "검색",  icon: Search },
-  { href: "/map",     label: "지도",  icon: Map    },
 ];
 
 // 데스크탑 사이드바: 피드 / 검색 / [알림Bell] / 지도 / [글쓰기버튼] / 프로필
@@ -99,7 +98,7 @@ export function Navbar({ isAdmin = false }: { isAdmin?: boolean }) {
             padding: "8px 8px 28px",
           }}
         >
-          {/* 피드 / 검색 / 지도 */}
+          {/* 피드 / 검색 */}
           {MOBILE_TABS.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
@@ -112,6 +111,34 @@ export function Navbar({ isAdmin = false }: { isAdmin?: boolean }) {
               <span>{label}</span>
             </Link>
           ))}
+
+          {/* 글쓰기 FAB */}
+          <Link
+            href="/write"
+            prefetch={true}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "50px",
+              height: "50px",
+              borderRadius: "16px",
+              background: "var(--accent)",
+              color: "white",
+              textDecoration: "none",
+              transform: "translateY(-8px)",
+              boxShadow: "0 4px 16px rgba(45,80,22,0.35)",
+              flexShrink: 0,
+              transition: "all 0.15s ease",
+            }}
+            onMouseDown={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-8px) scale(0.92)"; }}
+            onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-8px) scale(1)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-8px) scale(1)"; }}
+            onTouchStart={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-8px) scale(0.92)"; }}
+            onTouchEnd={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-8px) scale(1)"; }}
+          >
+            <PenLine size={22} />
+          </Link>
 
           {/* 알림 */}
           <NotificationBell />

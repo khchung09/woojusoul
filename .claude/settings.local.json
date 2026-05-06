@@ -10,7 +10,11 @@
       "Bash(grep -v \"^$\")",
       "Bash(npx vercel *)",
       "Bash(kill %1)",
-      "Bash(wait)"
+      "Bash(wait)",
+      "Bash(node -e \"const t = require\\('C:/Users/chung/paw-app/node_modules/next/dist/server/web/spec-extension/revalidate-tag.js'\\); console.log\\(Object.keys\\(t\\)\\)\")",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }
